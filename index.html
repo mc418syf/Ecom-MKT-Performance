@@ -456,9 +456,10 @@ function renderChannels(T,Tc,Tp,R){
   const hasC=R.cmp&&R.cmp[1]>=COV.ch[0]&&R.cmp[0]<=COV.ch[1];
   $('k_ch').innerHTML=[kpi('Attributed sales',f$(T.sales),T.sales,hasC?Tc.sales:null,Tp.sales,'',1),kpi('Sessions',fN(T.sessions),T.sessions,hasC?Tc.sessions:null,Tp.sessions,'',1),
     kpi('Orders',fN(T.orders),T.orders,hasC?Tc.orders:null,Tp.orders,'',1),kpi('Conversion rate',fP(T.cvr),T.cvr,hasC?Tc.cvr:null,Tp.cvr,'rate',1)].join('');
-  const mk=(by,keyf)=>Object.values(by).map(r=>{const c=hasC?(Tc[keyf==='g'?'byGrp':'bySrc'][keyf==='g'?r.group:r.channel+'|'+r.traffic]||{sales:0}):null;
-    return {...r,share:T.sales?r.sales/T.sales:0,cvr:r.sessions?r.orders/r.sessions:0,aov:r.orders?r.sales/r.orders:0,chg:c?chg(r.sales,c.sales):null}});
-  const cols=first=>[...first,{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},{k:'chg',h:'vs CMP',f:chgH},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}];
+  const hasP=R.py[1]>=COV.ch[0]&&R.py[0]<=COV.ch[1];
+  const mk=(by,keyf)=>Object.values(by).map(r=>{const key=keyf==='g'?r.group:r.channel+'|'+r.traffic,sub=keyf==='g'?'byGrp':'bySrc',c=hasC?(Tc[sub][key]||{sales:0}):null,p=hasP?(Tp[sub][key]||{sales:0}):null;
+    return {...r,share:T.sales?r.sales/T.sales:0,cvr:r.sessions?r.orders/r.sessions:0,aov:r.orders?r.sales/r.orders:0,chg:c?chg(r.sales,c.sales):null,chgPY:p?chg(r.sales,p.sales):null}});
+  const cols=first=>[...first,{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},{k:'chg',h:'vs CMP',f:chgH},{k:'chgPY',h:'vs PY',f:chgH},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}];
   const tot={sales:f$(T.sales),share:'100%',orders:fN(T.orders),sessions:fN(T.sessions),cvr:fP(T.cvr),aov:f$(T.aov),newc:fN(T.newc),retc:fN(T.retc)};
   table($('t_grp'),cols([{k:'group',h:'Marketing channel',f:(v)=>`<span class="pill ${v==='Email'?'p-em':''}">${esc(v)}</span>`}]),mk(T.byGrp,'g'),'sales',{total:{...tot,group:'Total'}});
   table($('t_ch'),cols([{k:'channel',h:'Source'},{k:'group',h:'Marketing channel',l:1},{k:'traffic',h:'Type',l:1}]),mk(T.bySrc,'s'),'sales',{total:{...tot,channel:'Total'},
@@ -567,11 +568,13 @@ function renderKlaviyo(R){
   for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||isSend(c.campaign))continue;
     const k=normFlow(c.campaign),a=sh[k]??={sales:0,sessions:0,orders:0,names:new Set()};a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.names.add(c.campaign)}
   const fm={};fRows.forEach(x=>{const n=FD.flows[x[1]],r=fm[n]??={flow:n,deliveries:0,rev:0,orders:0,uo:0,uc:0};r.deliveries+=x[2];r.rev+=x[3];r.orders+=x[4];r.uo+=x[5];r.uc+=x[6]});
+  const flowRange=rg=>{if(!rg||rg[0]<FD.days[0]||rg[1]>FD.days[FD.days.length-1])return null;const m={};FD.rows.forEach(x=>{const d=FD.days[x[0]];if(d>=rg[0]&&d<=rg[1]){const n=FD.flows[x[1]];m[n]=(m[n]||0)+x[3]}});return m};
+  const fCmp=flowRange(R.cmp),fPy=flowRange(R.py);
   const used=new Set(),frows=Object.values(fm).map(r=>{const k=normFlow(r.flow),s=sh[k];if(s)used.add(k);
-    return {...r,openR:r.deliveries?r.uo/r.deliveries:null,clickR:r.deliveries?r.uc/r.deliveries:null,share:flowDel?r.deliveries/flowDel:0,rshare:flowRev?r.rev/flowRev:0,per1k:r.deliveries?r.rev/r.deliveries*1000:null,aov:r.orders?r.rev/r.orders:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
-  $('fl_s').innerHTML=`Daily flow data from Klaviyo for ${cur[0]} → ${cur[1]}: deliveries are emails delivered and revenue is Placed Order attributed to the flow. Shopify columns are for ${lo} → ${hi}, matched by flow name. Follows the date range.`;
+    return {...r,chgCmp:fCmp?chg(r.rev,fCmp[r.flow]||0):null,chgPY:fPy?chg(r.rev,fPy[r.flow]||0):null,openR:r.deliveries?r.uo/r.deliveries:null,clickR:r.deliveries?r.uc/r.deliveries:null,share:flowDel?r.deliveries/flowDel:0,rshare:flowRev?r.rev/flowRev:0,per1k:r.deliveries?r.rev/r.deliveries*1000:null,aov:r.orders?r.rev/r.orders:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
+  $('fl_s').innerHTML=`Daily flow data from Klaviyo for ${cur[0]} → ${cur[1]}: deliveries are emails delivered and revenue is Placed Order attributed to the flow. Shopify columns are for ${lo} → ${hi}, matched by flow name. Rev vs CMP / PY compare each flow's revenue with the comparison range and the same days last year (n/a when Klaviyo daily data does not cover that range). Follows the date range.`;
   const unmatched=Object.entries(sh).filter(([k])=>!used.has(k)).map(([k,v])=>({k,...v})).filter(v=>v.sales!==0||v.sessions>=50);
-  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'openR',h:'Open %',f:dash(fP)},{k:'clickR',h:'Click %',f:dash(fP)},{k:'rev',h:'KL revenue',f:f$},{k:'rshare',h:'% of flow rev',f:v=>fP(v)+bar(v)},
+  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'openR',h:'Open %',f:dash(fP)},{k:'clickR',h:'Click %',f:dash(fP)},{k:'rev',h:'KL revenue',f:f$},{k:'chgCmp',h:'Rev vs CMP',f:chgH},{k:'chgPY',h:'Rev vs PY',f:chgH},{k:'rshare',h:'% of flow rev',f:v=>fP(v)+bar(v)},
     {k:'orders',h:'KL orders',f:fN},{k:'aov',h:'KL AOV',f:f$},{k:'per1k',h:'Rev / 1k deliveries',f:dash(f$)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'rev',
     {total:{flow:'Total',deliveries:fN(flowDel),share:'100%',openR:flowDel?fP(fRows.reduce((a,x)=>a+x[5],0)/flowDel):'–',clickR:flowDel?fP(fRows.reduce((a,x)=>a+x[6],0)/flowDel):'–',rev:f$(flowRev),rshare:'100%',orders:fN(flowOrd),aov:f$(flowOrd?flowRev/flowOrd:0),per1k:flowDel?f$(flowRev/flowDel*1000):'–',
       sess:fN(frows.reduce((a,f)=>a+(f.sess||0),0)),ord:fN(frows.reduce((a,f)=>a+(f.ord||0),0)),sal:f$(frows.reduce((a,f)=>a+(f.sal||0),0))}});
@@ -590,6 +593,7 @@ function buildFilters(){
 function groupBy(rows,dimKey){const m={};for(const x of rows){const v=PR.dims[dimKey][x[FI[dimKey]]];const r=m[v]??={name:v,net:0,units:0};r.net+=x[12];r.units+=x[13]}return m}
 function renderProducts(R){
   const cur=R.cur,cmp=R.cmp,rc=prodRows(cur,true),rp=cmp?prodRows(cmp,true):null,rpy=prodRows(R.py,true);
+  const hasPy=R.py[1]>=COV.pr[0]&&R.py[0]<=COV.pr[1];
   const Pall=sumProd(prodRows(cur)),A=sumProd(rc),B=rp?sumProd(rp):null,Y=sumProd(rpy),hasB=cmp&&cmp[1]>=COV.pr[0]&&cmp[0]<=COV.pr[1];
   $('k_pr').innerHTML=[kpi('Net sales',f$(A.net),A.net,hasB&&B?B.net:null,Y.net,'',1),kpi('Units',fN(A.units),A.units,hasB&&B?B.units:null,Y.units,'',1),
     kpi('Avg price / unit',f$(A.asp),A.asp,hasB&&B?B.asp:null,Y.asp,'',1,'Net sales ÷ units'),kpi('Products sold',fN(A.products),A.products,hasB&&B?B.products:null,Y.products,'',1,'Unique SKUs')].join('');
@@ -609,19 +613,19 @@ function renderProducts(R){
   $('fw_s').textContent=`Top 6 by ${m==='net'?'net sales':'units'} for ${S.start} → ${S.end}, grouped by ${g}. Follows the date range, the Day/Week/Month toggle and the filters.`;
   /* mixes */
   const mixes=[['status','Status'],['release','Release vs regular'],['vendor','Top vendors'],['dept','Departments'],['province','Regions'],['type','Product type'],['cls','Class'],['sub','Sub class'],['size','Size'],['season','Season']];
-  $('mixes').innerHTML=mixes.map(([k,t])=>{const a=groupBy(rc,k),b=rp?groupBy(rp,k):null;
+  $('mixes').innerHTML=mixes.map(([k,t])=>{const a=groupBy(rc,k),b=rp?groupBy(rp,k):null,b2=hasPy?groupBy(rpy,k):null;
     const top=Object.values(a).sort((x,y)=>y.net-x.net).slice(0,8);
-    return `<div class="panel"><h3>${t}</h3><p>Share of net sales · change vs compare</p><div class="bl">`+top.map(r=>{const c=hasB&&b?chg(r.net,(b[r.name]||{net:0}).net):null;
-      return `<div class="nm2">${esc(r.name)}</div><div class="vv">${f$(r.net)} · ${fP(A.net?r.net/A.net:0)} · ${chgH(c)}</div><div class="bw">${bar(A.net?r.net/A.net:0)}</div>`}).join('')+`</div></div>`}).join('');
+    return `<div class="panel"><h3>${t}</h3><p>Share of net sales · change vs compare · vs last year</p><div class="bl">`+top.map(r=>{const c=hasB&&b?chg(r.net,(b[r.name]||{net:0}).net):null;
+      return `<div class="nm2">${esc(r.name)}</div><div class="vv">${f$(r.net)} · ${fP(A.net?r.net/A.net:0)} · CMP ${chgH(c)} · PY ${chgH(b2?chg(r.net,(b2[r.name]||{net:0}).net):null)}</div><div class="bw">${bar(A.net?r.net/A.net:0)}</div>`}).join('')+`</div></div>`}).join('');
   /* top products */
   const agg=rows=>{const m={};rows.forEach(x=>{const r=m[x[1]]??={s:x[1],net:0,units:0,md:0,rel:0};r.net+=x[12];r.units+=x[13];if(PR.dims.status[x[2]]==='Markdowns')r.md+=x[12];if(PR.dims.release[x[3]]==='Release')r.rel+=x[12];r.vendor=PR.dims.vendor[x[6]];r.dept=PR.dims.dept[x[8]];r.cls=PR.dims.cls[x[9]]});return m};
-  const ac=agg(rc),ap=rp?agg(rp):null;
+  const ac=agg(rc),ap=rp?agg(rp):null,apy=hasPy?agg(rpy):null;
   const rank=o=>{const r={};Object.values(o).sort((a,b)=>b.net-a.net).forEach((x,i)=>r[x.s]=i+1);return r},rkP=ap?rank(ap):null;
   const list=Object.values(ac).sort((a,b)=>b.net-a.net).slice(0,100).map((r,i)=>{const sk=PR.skus[r.s],p=ap&&ap[r.s];
     return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,shareAll:Pall.net?r.net/Pall.net:0,
-      chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
+      chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,chgPY:apy&&apy[r.s]?chg(r.net,apy[r.s].net):null,isNewPY:!!apy&&!apy[r.s],rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
   table($('t_pr'),[{k:'rank',h:'#'},{k:'title',h:'Product',nm:1,f:(v,r)=>(r.img?`<img class="thumb" loading="lazy" src="${esc(r.img)}" alt="">`:'')+esc(v)+(r.rel>r.net/2?' <span class="pill p-rel">release</span>':'')+(r.isNew?' <span class="pill p-new">new</span>':'')},
-    {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of view',f:v=>fP(v)+bar(v*5)},{k:'shareAll',h:'% of total sales',f:fP},{k:'chg',h:'vs CMP',f:chgH},
+    {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of view',f:v=>fP(v)+bar(v*5)},{k:'shareAll',h:'% of total sales',f:fP},{k:'chg',h:'vs CMP',f:chgH},{k:'chgPY',h:'vs PY',f:(v,r)=>v==null?(r.isNewPY?'<span class="up">new</span>':'<span class="flat">n/a</span>'):chgH(v)},
     {k:'rkChg',h:'Rank Δ',f:v=>v==null?'<span class="flat">–</span>':v===0?'<span class="flat">=</span>':`<span class="${v>0?'up':'dn'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},
     {k:'units',h:'Units',f:fN},{k:'asp',h:'Avg price',f:f$},{k:'mdS',h:'Markdown %',f:fP}],
     list,'net',{detail:r=>dk('SKU',esc(r.sku))+dk('Class',esc(r.cls))+dk('Release sales',f$(r.rel))+dk('Markdown sales',f$(r.md))+dk('Compare sales',ap&&ap[r.s]?f$(ap[r.s].net):'–')});
