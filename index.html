@@ -101,6 +101,8 @@ tr.tot td{background:var(--bg-3);font-weight:700;border-top:1px solid var(--bord
 .thumb{width:34px;height:34px;object-fit:cover;border-radius:3px;background:var(--bg-3);vertical-align:middle;margin-right:8px}
 .cell{text-align:center;font-size:11px;min-width:58px}
 svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
+#tip{position:fixed;pointer-events:none;background:#141414;border:1px solid #3a3a3a;padding:8px 11px;border-radius:4px;font-size:12px;z-index:100;display:none;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.6);max-width:300px}
+#tip b{color:#fff}#tip .tr{display:flex;justify-content:space-between;gap:18px}#tip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
 .cov{font-size:11px;color:var(--text-3);margin-top:6px}
 </style>
 </head>
@@ -119,7 +121,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <button class="tab active" data-t="sm">Summary</button>
   <button class="tab" data-t="ch">Channels</button>
   <button class="tab" data-t="ca">Campaigns</button>
-  <button class="tab" data-t="kl">Klaviyo</button>
+  <button class="tab" data-t="kl">Email Overview</button>
   <button class="tab" data-t="pr">Product Performance</button>
   <button class="tab" data-t="co">Product × Channel</button>
   <button class="tab" data-t="me">Method</button>
@@ -174,17 +176,20 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
 <div class="tab-panel" id="p_kl">
   <div class="sec" id="kl_note"></div>
   <div class="kpi-strip"><div class="kpis" id="k_kl"></div></div>
+  <div class="sec"><div class="sec-h">Period by period</div><div class="sec-s" id="pp_s"></div><div class="tw" id="t_pp"></div></div>
+  <div class="sec"><div class="sec-h">Campaigns versus flows</div><div class="sec-s">Klaviyo sales split by message type across the selected range (Shopify, last non-direct click).</div><div class="tw" id="t_cf"></div><div id="cf_note"></div></div>
   <div class="sec"><div class="sec-h">Klaviyo campaigns</div><div class="sec-s">Sends dated inside the selected range. Klaviyo delivery and engagement joined to Shopify attributed results (last non-direct click) by Klaviyo message ID.</div><div class="tw" id="t_kl"></div></div>
-  <div class="sec"><div class="sec-h">Klaviyo flows</div><div class="sec-s" id="fl_s"></div><div class="tw" id="t_fl"></div></div>
+  <div class="sec"><div class="sec-h">Klaviyo flows</div><div class="sec-s" id="fl_s"></div><div class="tw" id="t_fl"></div><div id="fl_note"></div></div>
 </div>
 
 <!-- PRODUCT PERFORMANCE -->
 <div class="tab-panel" id="p_pr">
   <div class="kpi-strip"><div class="kpis" id="k_pr"></div></div>
-  <div class="sec"><div class="chips" id="filters"></div>
-    <div class="row"><div class="seg" id="metSeg"><button data-m="net" class="on">Sales</button><button data-m="units">Units</button></div></div>
-    <div class="chart-wrap" style="margin-top:12px"><div id="ts_pr"></div></div></div>
-  <div class="sec"><div class="sec-h">4 week trend</div><div class="sec-s">The four weeks ending with the week of the selected end date.</div>
+  <div class="sec"><div class="row" style="justify-content:space-between;margin-bottom:10px"><div><div class="sec-h" style="margin:0">Sales and units trend</div><div class="sec-s" style="margin:0" id="pr_ts_s"></div></div>
+    <div class="seg" id="metSeg"><button data-m="net" class="on">Sales</button><button data-m="units">Units</button></div></div>
+    <div class="chart-wrap"><div class="legend" id="lg_pr"></div><div id="ts_pr"></div></div></div>
+  <div class="sec"><div class="sec-h">Filters</div><div class="chips" id="filters"></div></div>
+  <div class="sec"><div class="sec-h">Trend by breakdown</div><div class="sec-s" id="fw_s"></div>
     <div class="chips"><div class="fl"><div class="ctl-l">Breakdown</div><select id="fwDim">
       <option value="vendor">Brand / Vendor</option><option value="type">Product Type</option><option value="dept">Department</option><option value="cls">Class</option>
       <option value="sub">Sub Class</option><option value="status">Status</option><option value="release">Release vs Regular</option><option value="season">Season</option><option value="size">Size</option></select></div></div>
@@ -208,6 +213,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <div class="sec"><div class="sec-h">Weekly refresh</div>
     <div class="note">Drop the new daily exports into <b>data/channels/</b>, <b>data/campaigns/</b> and <b>data/product/</b> (date range in each file name), then run <b>python3 build/build.py</b>. A newer file replaces any dates it repeats. Weeks start Sunday; times are America/Vancouver.</div></div>
 </div>
+<div id="tip"></div>
 <div class="foot" id="foot"></div>
 
 <script>
@@ -326,25 +332,56 @@ function stacked(el,keys,series,colors,opt={}){ // keys: bucket keys; series: [{
     svg+=`<line x1="${x}" x2="${x}" y1="6" y2="${H}" stroke="#f5b83d" stroke-dasharray="3 3" opacity=".8"><title>${esc(m.label)}</title></line><circle cx="${x}" cy="6" r="3" fill="#f5b83d"><title>${esc(m.label)}</title></circle>`});
   el.innerHTML=svg+'</svg>';
 }
-function lines(el,keys,series,opt={}){
-  const n=keys.length,W=Math.max(1200,n*90),H=150,pl=56,all=series.flatMap(s=>s.vals),max=Math.max(1,...all),slot=(W-pl-20)/Math.max(1,n-1);
-  let svg=`<svg viewBox="0 0 ${W} ${H+32}" width="100%" style="min-width:600px" role="img">`;
-  for(let g=0;g<=3;g++){const y=H-g/3*(H-18);svg+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="#222"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${opt.fmt?opt.fmt(max*g/3):f$(max*g/3)}</text>`}
-  keys.forEach((k,i)=>svg+=`<text x="${pl+i*slot}" y="${H+16}" text-anchor="middle">${esc(k)}</text>`);
-  series.forEach((s,j)=>{const c=PAL[j%PAL.length];const pts=s.vals.map((v,i)=>[pl+i*slot,H-v/max*(H-18),v]);
-    svg+=`<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`+
-      pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}"><title>${esc(s.name)} ${keys[pts.indexOf(p)]}: ${(opt.fmt||f$)(p[2])}</title></circle>`).join('')});
-  el.innerHTML=svg+'</svg>';
+const TIP=()=>$('tip');
+function longLabel(k,g){return g==='month'?D0(k+'-01').toLocaleDateString('en-CA',{month:'long',year:'numeric'}):g==='week'?'Week of '+lab(k)+' – '+lab(addDays(k,6)):D0(k).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}
+function hoverSvg(el,W,pl,slot,n,center,html){
+  const svg=el.querySelector('svg'),guide=svg.querySelector('.guide'),tip=TIP();
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*W;
+    let i=center?Math.floor((vx-pl)/slot):Math.round((vx-pl)/slot);
+    if(i<0||i>=n){svg.onmouseleave();return}
+    const gx=pl+i*slot+(center?slot/2:0);guide.setAttribute('x1',gx);guide.setAttribute('x2',gx);guide.style.display='';
+    tip.innerHTML=html(i);tip.style.display='block';
+    const w=tip.offsetWidth;let x=e.clientX+16;if(x+w>innerWidth-8)x=e.clientX-w-16;tip.style.left=x+'px';tip.style.top=Math.max(8,e.clientY-20)+'px'};
+  svg.onmouseleave=()=>{tip.style.display='none';guide.style.display='none'};
+}
+const GUIDE='<line class="guide" x1="0" x2="0" y1="6" y2="150" stroke="#8a8a86" stroke-dasharray="3 3" style="display:none"/>';
+function combo(el,keys,net,units,g,met){ // bars = chosen metric, line = the other on the right axis
+  const n=keys.length,W=1200,H=190,pl=62,pr=62,slot=(W-pl-pr)/n,bw=Math.max(1.5,Math.min(60,slot-(slot>8?3:0)));
+  const bars=met==='net'?net:units,line=met==='net'?units:net,fb=met==='net'?f$:fN,fl=met==='net'?fN:f$;
+  const mb=Math.max(1,...bars),ml=Math.max(1,...line),y=(v,m)=>H-v/m*(H-18);
+  let svg=`<svg viewBox="0 0 ${W} ${H+34}" width="100%" style="min-width:700px" role="img">`;
+  for(let q=0;q<=3;q++){const yy=H-q/3*(H-18);svg+=`<line x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}" stroke="#222"/><text x="${pl-6}" y="${yy+4}" text-anchor="end">${fb(mb*q/3)}</text><text x="${W-pr+6}" y="${yy+4}" fill="#d95926" style="fill:#d95926">${fl(ml*q/3)}</text>`}
+  const every=Math.ceil(n/Math.floor((W-pl-pr)/70));
+  keys.forEach((k,i)=>{const x=pl+i*slot+(slot-bw)/2,h=bars[i]/mb*(H-18);
+    svg+=`<rect x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="#3987e5" opacity=".85"/>`;
+    if(i%every===0)svg+=`<text x="${x+bw/2}" y="${H+15}" text-anchor="middle">${blabel(k,g)}</text>`});
+  const pts=keys.map((k,i)=>[pl+i*slot+slot/2,y(line[i],ml)]);
+  svg+=`<polyline fill="none" stroke="#d95926" stroke-width="2" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`;
+  if(n<=45)svg+=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#d95926"/>`).join('');
+  el.innerHTML=svg+GUIDE+'</svg>';
+  hoverSvg(el,W,pl,slot,n,true,i=>`<b>${longLabel(keys[i],g)}</b><div class="tr"><span><i style="background:#3987e5"></i>Net sales</span><b>${f$(net[i])}</b></div><div class="tr"><span><i style="background:#d95926"></i>Units</span><b>${fN(units[i])}</b></div><div class="tr"><span>Avg price</span><b>${f$(units[i]?net[i]/units[i]:0)}</b></div>`);
+}
+function lines(el,keys,series,g,fmt){
+  const n=keys.length,W=1200,H=170,pl=62,pr=20,all=series.flatMap(s=>s.vals),max=Math.max(1,...all),slot=n>1?(W-pl-pr)/(n-1):0,f=fmt||f$;
+  let svg=`<svg viewBox="0 0 ${W} ${H+34}" width="100%" style="min-width:700px" role="img">`;
+  for(let q=0;q<=3;q++){const yy=H-q/3*(H-18);svg+=`<line x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}" stroke="#222"/><text x="${pl-6}" y="${yy+4}" text-anchor="end">${f(max*q/3)}</text>`}
+  const every=Math.ceil(n/Math.floor((W-pl-pr)/80));
+  keys.forEach((k,i)=>{if(i%every===0)svg+=`<text x="${pl+i*slot}" y="${H+16}" text-anchor="middle">${blabel(k,g)}</text>`});
+  series.forEach((s,j)=>{const c=PAL[j%PAL.length],pts=s.vals.map((v,i)=>[pl+i*slot,H-v/max*(H-18)]);
+    svg+=`<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`+(n<=45?pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${c}"/>`).join(''):'')});
+  el.innerHTML=svg+GUIDE+'</svg>';
+  hoverSvg(el,W,pl,slot||1,n,false,i=>`<b>${longLabel(keys[i],g)}</b>`+series.map((s,j)=>[s,j]).sort((a,b)=>b[0].vals[i]-a[0].vals[i]).map(([s,j])=>`<div class="tr"><span><i style="background:${PAL[j%PAL.length]}"></i>${esc(s.name)}</span><b>${f(s.vals[i])}</b></div>`).join(''));
 }
 function legend(el,items){el.innerHTML=items.map(([n,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}
 
 /* ---- sends (dated Klaviyo campaigns) ---- */
 const isSend=n=>/^\d{4}_\d{2}_\d{2}_/.test(n),sendDate=n=>{const m=n.match(/^(\d{4})_(\d{2})_(\d{2})_/);return m?`${m[1]}-${m[2]}-${m[3]}`:null};
+const EMAIL_DAILY=(()=>{const m={};for(const x of CH.rows){if(CH.pairs[x[1]].group!=='Email')continue;const d=CH.days[x[0]],e=m[d]??=[0,0,0];e[0]+=x[2];e[1]+=x[4];e[2]+=x[3]}return m})();
 const KL=DATA.klaviyo,KLBY={},MIDS={},CAT=CA.camps.map(()=>({sales:0,sessions:0,orders:0,newc:0,retc:0}));
 KL.campaigns.forEach(k=>KLBY[k.mid]=k);
 CA.camps.forEach((c,i)=>{if(c.mid)(MIDS[c.mid]??=[]).push(i)});
 for(const x of CA.rows){const a=CAT[x[1]];a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.newc+=x[5];a.retc+=x[6]}
-const SENDS=KL.campaigns.map(k=>{const idx=MIDS[k.mid]||[],s={...k,campaign:k.name,sales:0,sessions:0,orders:0,matched:idx.length>0};
+const SENDS=KL.campaigns.map(k=>{const idx=MIDS[k.mid]||[],s={...k,campaign:k.name,sales:0,sessions:0,orders:0,matched:idx.length>0&&k.date>=COV.ca[0]};
   idx.forEach(i=>{s.sales+=CAT[i].sales;s.sessions+=CAT[i].sessions;s.orders+=CAT[i].orders});return s}).sort((a,b)=>a.date>b.date?1:-1);
 
 /* ---- render ---- */
@@ -467,6 +504,37 @@ function renderKlaviyo(R){
     rows,'date',{total:{name:'Total',recipients:fN(sum('recipients')),delivered:fN(del),openR:fP(del?sum('uopens')/del:0),clickR:fP(del?sum('uclicks')/del:0),unsubR:fP(del?sum('unsub')/del:0),
       conv:fN(sum('conv')),sess:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.sessions,0)),ord:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.orders,0)),sal:f$(totSales),share:'100%'},
     detail:r=>dk('Message ID',esc(r.mid))+dk('Send time',esc(r.date+' '+r.time+' '+r.dow))+dk('Total bounced',fN(r.bounced))+dk('Spam complaints',fN(r.spam))+dk('Unique clicks',fN(r.uclicks))+dk('Subject',esc(r.subject||'–'))});
+  /* period by period */
+  const g=S.grain,len=g==='day'?1:g==='week'?7:30.4375,EM=EMAIL_DAILY;
+  const bounds=k=>g==='day'?[k,k]:g==='week'?[k,addDays(k,6)]:[k+'-01',(()=>{const d=D0(k+'-01');d.setMonth(d.getMonth()+1);d.setDate(0);return ISO(d)})()];
+  const prevKey=k=>g==='day'?addDays(k,-1):g==='week'?addDays(k,-7):(()=>{const d=D0(k+'-01');d.setMonth(d.getMonth()-1);return ISO(d).slice(0,7)})();
+  const emSum=(a,b)=>{const t={sales:0,orders:0,sessions:0};for(let d=a;d<=b;d=addDays(d,1)){const e=EM[d];if(e){t.sales+=e[0];t.orders+=e[1];t.sessions+=e[2]}}return t};
+  const klSum=(a,b)=>{const t={rec:0,del:0,uo:0,uc:0,un:0,ms:0,mr:0,n:0};SENDS.forEach(s=>{if(s.date>=a&&s.date<=b){t.rec+=s.recipients;t.del+=s.delivered;t.uo+=s.uopens;t.uc+=s.uclicks;t.un+=s.unsub;t.n++;if(s.matched){t.ms+=s.sales;t.mr+=s.recipients}}});return t};
+  const klCov=[KL.campaigns[0].date,KL.campaigns[KL.campaigns.length-1].date],inKl=(a,b)=>a>=klCov[0]&&b<=klCov[1];
+  const ytdS=cur[1].slice(0,4)+'-01-01',ytdE=cur[1]<COV.ch[1]?cur[1]:COV.ch[1],ytd=emSum(ytdS,ytdE),ytdDays=Math.max(1,diffDays(ytdS,ytdE)+1);
+  const mk2=k=>{const [a,b]=bounds(k),e=emSum(a,b),pk=prevKey(k),[pa,pb]=bounds(pk),pe=emSum(pa,pb),pye=emSum(addDays(a,-364),addDays(b,-364)),kk=klSum(a,b),exp=ytd.sales/ytdDays*(diffDays(a,b)+1);
+    const has=a<=COV.ch[1],ok=inKl(a,b);
+    return {start:a,label:blabel(k,g)+(b>COV.ch[1]?' (partial)':''),sales:e.sales,vsPrev:has&&pb>=COV.ch[0]&&pe.sales?e.sales/pe.sales-1:null,vsPY:addDays(a,-364)>=COV.ch[0]&&pye.sales?e.sales/pye.sales-1:null,
+      vsYTD:exp?e.sales/exp-1:null,orders:e.orders,aov:e.orders?e.sales/e.orders:0,sessions:e.sessions,cvr:e.sessions?e.orders/e.sessions:0,
+      rec:ok?kk.rec:null,openR:ok&&kk.del?kk.uo/kk.del:null,clickR:ok&&kk.del?kk.uc/kk.del:null,unsubR:ok&&kk.del?kk.un/kk.del:null,per1k:ok&&kk.mr?kk.ms/kk.mr*1000:null}};
+  const pk=[...new Set([...Array(diffDays(cur[0],cur[1])+1)].map((_,i)=>bucket(addDays(cur[0],i),g)))],prow=pk.map(mk2);
+  const pct=v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${(v*100).toFixed(1)}%</span>`;
+  $('pp_s').innerHTML=`Email = Shopify marketing channel group "Email" (Klaviyo, Spently, Mailchimp, Shopify Email), last click. Each row compares to the period before it; PY is the same days 364 days earlier; vs YTD compares with the year-to-date average per ${g}. Recipients and rates are Klaviyo <b>campaign</b> sends only (flows have no dates), from ${klCov[0]}. Follows the Day/Week/Month toggle.`;
+  const kt=klSum(klCov[0]>ytdS?klCov[0]:ytdS,klCov[1]<ytdE?klCov[1]:ytdE),ktDays=Math.max(1,diffDays(klCov[0]>ytdS?klCov[0]:ytdS,klCov[1]<ytdE?klCov[1]:ytdE)+1);
+  table($('t_pp'),[{k:'start',h:'Period',f:(v,r)=>r.label},{k:'sales',h:'Email sales',f:f$},{k:'vsPrev',h:'vs prev',f:pct},{k:'vsPY',h:'vs PY',f:pct},{k:'vsYTD',h:'vs YTD avg',f:pct},{k:'orders',h:'Orders',f:fN},{k:'aov',h:'AOV',f:f$},
+    {k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'rec',h:'Recipients',f:v=>v==null?'–':fN(v)},{k:'openR',h:'Open %',f:v=>v==null?'–':fP(v)},{k:'clickR',h:'Click %',f:v=>v==null?'–':fP(v)},
+    {k:'unsubR',h:'Unsub %',f:v=>v==null?'–':fP(v)},{k:'per1k',h:'Sales / 1k recip.',f:v=>v==null?'–':f$(v)}],prow,'start',
+    {total:{start:`YTD average per ${g}`,sales:f$(ytd.sales/ytdDays*len),orders:fN(ytd.orders/ytdDays*len),aov:f$(ytd.orders?ytd.sales/ytd.orders:0),sessions:fN(ytd.sessions/ytdDays*len),cvr:fP(ytd.sessions?ytd.orders/ytd.sessions:0),
+      rec:fN(kt.rec/ktDays*len),openR:fP(kt.del?kt.uo/kt.del:0),clickR:fP(kt.del?kt.uc/kt.del:0),unsubR:fP(kt.del?kt.un/kt.del:0)}});
+  /* campaigns versus flows */
+  const clo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],chi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1],cf={c:{sales:0,orders:0,sessions:0},f:{sales:0,orders:0,sessions:0}};
+  for(const x of CA.rows){const d=CA.days[x[0]];if(d<clo||d>chi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo')continue;const a=isSend(c.campaign)?cf.c:cf.f;a.sales+=x[2];a.orders+=x[4];a.sessions+=x[3]}
+  const ks=klSum(cur[0],cur[1]),cfT=cf.c.sales+cf.f.sales,fl=KL.flows;
+  const cfRows=[{type:'Campaigns',...cf.c,share:cfT?cf.c.sales/cfT:0,aov:cf.c.orders?cf.c.sales/cf.c.orders:0,rec:ks.rec,per1k:ks.mr?ks.ms/ks.mr*1000:null,n:ks.n},
+    {type:'Flows',...cf.f,share:cfT?cf.f.sales/cfT:0,aov:cf.f.orders?cf.f.sales/cf.f.orders:0,rec:null,per1k:null,n:fl.length}];
+  table($('t_cf'),[{k:'type',h:'Type'},{k:'sales',h:'Sales',f:f$},{k:'share',h:'Share',f:v=>fP(v)+bar(v)},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'n',h:'Sends / flows',f:fN},
+    {k:'rec',h:'Recipients',f:v=>v==null?'n/a':fN(v)},{k:'per1k',h:'Sales / 1k recip.',f:v=>v==null?'–':f$(v)},{k:'aov',h:'AOV',f:f$}],cfRows,'sales',{total:{type:'Total',sales:f$(cfT),share:'100%',orders:fN(cf.c.orders+cf.f.orders),sessions:fN(cf.c.sessions+cf.f.sessions)}});
+  $('cf_note').innerHTML=(`<div class="note" style="margin-top:10px">Shopify Klaviyo data covers ${COV.ca[0]} → ${COV.ca[1]}; showing ${clo} → ${chi}. "Flows" are Klaviyo lines whose name is not a dated send. Flow recipients are not shown because the flow export has no dates (all-time snapshot: ${fN(fl.reduce((a,f)=>a+f.recipients,0))} recipients across ${fl.length} flows).</div>`);
   /* flows */
   const lo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],hi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1],sh={};
   for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||isSend(c.campaign))continue;
@@ -480,7 +548,7 @@ function renderKlaviyo(R){
     {k:'convRate',h:'KL conv. rate',f:v=>v==null?'–':fP(v)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'deliveries',
     {total:{flow:'Total',deliveries:fN(totDel),share:'100%',recipients:fN(KL.flows.reduce((a,f)=>a+f.recipients,0)),conv:fN(KL.flows.reduce((a,f)=>a+f.conv,0)),
       sess:fN(frows.reduce((a,f)=>a+(f.sess||0),0)),ord:fN(frows.reduce((a,f)=>a+(f.ord||0),0)),sal:f$(frows.reduce((a,f)=>a+(f.sal||0),0))}});
-  if(unmatched.length)$('t_fl').insertAdjacentHTML('afterend',`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow in the export: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`);
+  $('fl_note').innerHTML=unmatched.length?`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow in the export: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`:'';
 }
 
 /* ---- product performance ---- */
@@ -498,18 +566,20 @@ function renderProducts(R){
   const Pall=sumProd(prodRows(cur)),A=sumProd(rc),B=rp?sumProd(rp):null,Y=sumProd(rpy),hasB=cmp&&cmp[1]>=COV.pr[0]&&cmp[0]<=COV.pr[1];
   $('k_pr').innerHTML=[kpi('Net sales',f$(A.net),A.net,hasB&&B?B.net:null,Y.net,'',1),kpi('Units',fN(A.units),A.units,hasB&&B?B.units:null,Y.units,'',1),
     kpi('Avg price / unit',f$(A.asp),A.asp,hasB&&B?B.asp:null,Y.asp,'',1,'Net sales ÷ units'),kpi('Products sold',fN(A.products),A.products,hasB&&B?B.products:null,Y.products,'',1,'Unique SKUs')].join('');
-  /* trend */
-  const g=S.grain,m=S.met,bk={};for(let d=cur[0];d<=cur[1];d=addDays(d,1))bk[bucket(d,g)]=0;
-  rc.forEach(x=>{bk[bucket(PR.days[x[0]],g)]+=m==='net'?x[12]:x[13]});
-  const keys=Object.keys(bk).sort();
-  stacked($('ts_pr'),keys,[{name:m==='net'?'Net sales':'Units',vals:keys.map(k=>bk[k])}],['#3987e5'],{grain:g});
-  /* 4 week */
-  const weekEnd=wkStart(cur[1]),wks=[3,2,1,0].map(i=>addDays(weekEnd,-7*i)),dim=$('fwDim').value,gm={};
-  const rows4=prodRows([wks[0],addDays(weekEnd,6)],true);
-  rows4.forEach(x=>{const v=PR.dims[dim][x[FI[dim]]],w=wkStart(PR.days[x[0]]),i=wks.indexOf(w);if(i<0)return;const r=gm[v]??={name:v,vals:[0,0,0,0],tot:0};r.vals[i]+=x[12];r.tot+=x[12]});
+  /* trend: bars + line, hover for date, sales and units */
+  const g=S.grain,m=S.met,bn={},bu={};for(let d=cur[0];d<=cur[1];d=addDays(d,1)){const k=bucket(d,g);bn[k]=0;bu[k]=0}
+  rc.forEach(x=>{const k=bucket(PR.days[x[0]],g);bn[k]+=x[12];bu[k]+=x[13]});
+  const keys=Object.keys(bn).sort();
+  combo($('ts_pr'),keys,keys.map(k=>bn[k]),keys.map(k=>bu[k]),g,m);
+  legend($('lg_pr'),m==='net'?[['Net sales (bars, left axis)','#3987e5'],['Units (line, right axis)','#d95926']]:[['Units (bars, left axis)','#3987e5'],['Net sales (line, right axis)','#d95926']]);
+  $('pr_ts_s').textContent=`${S.start} → ${S.end} by ${g}. Hover a point for the date, sales and units.`;
+  /* trend by breakdown over the selected range */
+  const dim=$('fwDim').value,gm={},idx={};keys.forEach((k,i)=>idx[k]=i);
+  rc.forEach(x=>{const v=PR.dims[dim][x[FI[dim]]],i=idx[bucket(PR.days[x[0]],g)];const r=gm[v]??={name:v,vals:keys.map(()=>0),tot:0};const val=m==='net'?x[12]:x[13];r.vals[i]+=val;r.tot+=val});
   const top6=Object.values(gm).sort((a,b)=>b.tot-a.tot).slice(0,6);
-  lines($('ts_fw'),wks.map(w=>'Wk '+lab(w)),top6.map(r=>({name:r.name,vals:r.vals})));
+  lines($('ts_fw'),keys,top6.map(r=>({name:r.name,vals:r.vals})),g,m==='net'?f$:fN);
   legend($('lg_fw'),top6.map((r,i)=>[r.name,PAL[i%PAL.length]]));
+  $('fw_s').textContent=`Top 6 by ${m==='net'?'net sales':'units'} for ${S.start} → ${S.end}, grouped by ${g}. Follows the date range, the Day/Week/Month toggle and the filters.`;
   /* mixes */
   const mixes=[['status','Status'],['release','Release vs regular'],['vendor','Top vendors'],['dept','Departments'],['province','Regions'],['type','Product type'],['cls','Class'],['sub','Sub class'],['size','Size'],['season','Season']];
   $('mixes').innerHTML=mixes.map(([k,t])=>{const a=groupBy(rc,k),b=rp?groupBy(rp,k):null;
