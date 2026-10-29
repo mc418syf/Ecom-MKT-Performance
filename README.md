@@ -11,7 +11,7 @@ Date range, presets, comparison (previous period / same weeks last year / custom
 | `channels/` | Top performing marketing channels by day | last click, includes direct |
 | `campaigns/` | Top performing marketing campaigns by day | last non-direct click |
 | `product/` | Product sales lines (date x SKU x size x province) | zero-sales lines can be left in; they are dropped |
-| `klaviyo/` | `campaign_report_*.csv` (campaign revenue, Placed Order), `flow_daily_*.csv` (daily flow deliveries and revenue), `campaignListReport_*.csv` (subject lines, audiences) | pulled from Klaviyo |
+| `klaviyo/` | `campaign_report_*.csv` (revenue per send), `campaign_daily_*.csv` and `flow_daily_*.csv` (daily deliveries, opens, clicks, revenue), `campaignListReport_*.csv` (subject lines) | pulled from Klaviyo; `python3 build/klaviyo_files.py` converts saved API responses into these files |
 | `sku_images.csv` | SKU -> image URL | optional |
 
 ## Weekly refresh

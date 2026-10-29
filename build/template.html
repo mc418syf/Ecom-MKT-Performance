@@ -178,6 +178,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <div class="kpi-strip"><div class="kpis" id="k_kl"></div></div>
   <div class="sec"><div class="sec-h">Period by period</div><div class="sec-s" id="pp_s"></div><div class="tw" id="t_pp"></div></div>
   <div class="sec"><div class="sec-h">Campaigns versus flows</div><div class="sec-s">Klaviyo revenue split by message type across the selected range, with the Shopify view alongside.</div><div class="tw" id="t_cf"></div><div id="cf_note"></div></div>
+  <div class="sec"><div class="sec-h">Campaigns and flows by day</div><div class="sec-s" id="dd_s"></div><div class="chart-wrap"><div class="legend" id="lg_dd"></div><div id="ts_dd"></div></div><div class="tw" id="t_dd" style="margin-top:12px"></div></div>
   <div class="sec"><div class="sec-h">Klaviyo campaigns</div><div class="sec-s">Sends dated inside the selected range. Klaviyo delivery, engagement and revenue (Placed Order) joined to Shopify attributed results (last non-direct click) by Klaviyo message ID.</div><div class="tw" id="t_kl"></div></div>
   <div class="sec"><div class="sec-h">Klaviyo flows</div><div class="sec-s" id="fl_s"></div><div class="tw" id="t_fl"></div><div id="fl_note"></div></div>
 </div>
@@ -228,6 +229,7 @@ const D0=s=>new Date(s+'T12:00:00');
 const addDays=(s,n)=>{const d=D0(s);d.setDate(d.getDate()+n);return ISO(d)};
 const diffDays=(a,b)=>Math.round((D0(b)-D0(a))/864e5);
 const lab=(s,o)=>D0(s).toLocaleDateString('en-CA',o||{month:'short',day:'numeric'});
+const dow=d=>D0(d).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
 const wkStart=s=>addDays(s,-D0(s).getDay());
 const bucket=(s,g)=>g==='day'?s:g==='week'?wkStart(s):s.slice(0,7);
 const blabel=(k,g)=>g==='month'?D0(k+'-01').toLocaleDateString('en-CA',{month:'short',year:'2-digit'}):g==='week'?'Wk '+lab(k):lab(k,{month:'short',day:'numeric'});
@@ -330,7 +332,8 @@ function stacked(el,keys,series,colors,opt={}){ // keys: bucket keys; series: [{
     if(i%every===0)svg+=`<text x="${x+bw/2}" y="${H+15}" text-anchor="middle">${blabel(k,opt.grain)}</text>`});
   (opt.markers||[]).forEach(m=>{const i=keys.indexOf(m.key);if(i<0)return;const x=pl+i*slot+slot/2;
     svg+=`<line x1="${x}" x2="${x}" y1="6" y2="${H}" stroke="#f5b83d" stroke-dasharray="3 3" opacity=".8"><title>${esc(m.label)}</title></line><circle cx="${x}" cy="6" r="3" fill="#f5b83d"><title>${esc(m.label)}</title></circle>`});
-  el.innerHTML=svg+'</svg>';
+  el.innerHTML=svg+GUIDE+'</svg>';
+  if(opt.tip)hoverSvg(el,W,pl,slot,n,true,opt.tip);
 }
 const TIP=()=>$('tip');
 function longLabel(k,g){return g==='month'?D0(k+'-01').toLocaleDateString('en-CA',{month:'long',year:'numeric'}):g==='week'?'Week of '+lab(k)+' – '+lab(addDays(k,6)):D0(k).toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}
@@ -531,6 +534,24 @@ function renderKlaviyo(R){
     {k:'rec',h:'Recipients / deliveries',f:fN},{k:'per1k',h:'Rev / 1k',f:dash(f$)},{k:'sales',h:'Shopify sales',f:f$},{k:'orders',h:'Shopify orders',f:fN},{k:'sessions',h:'Shopify sessions',f:fN}],cfRows,'rev',
     {total:{type:'Total',rev:f$(rvT),share:'100%',kord:fN(campOrd+flowOrd),rec:fN(sum('recipients')+flowDel),sales:f$(cf.c.sales+cf.f.sales),orders:fN(cf.c.orders+cf.f.orders),sessions:fN(cf.c.sessions+cf.f.sessions)}});
   $('cf_note').innerHTML=`<div class="note" style="margin-top:10px">Campaign recipients are people sent to; flow figures are emails delivered. Shopify columns cover ${COV.ca[0]} → ${COV.ca[1]} (showing ${clo} → ${chi}); "Flows" there are Klaviyo lines whose name is not a dated send.</div>`;
+  /* campaigns and flows by day / week / month */
+  const CD=KL.campaign_daily,cdm={},fdm={};
+  CD.rows.forEach(x=>{cdm[CD.days[x[0]]]=x});
+  FD.rows.forEach(x=>{const d=FD.days[x[0]],a=fdm[d]??=[0,0,0,0,0];a[0]+=x[2];a[1]+=x[3];a[2]+=x[4];a[3]+=x[5];a[4]+=x[6]});
+  const dd={},ddOrder=[];
+  for(let d=cur[0];d<=cur[1];d=addDays(d,1)){const k=bucket(d,g),r=dd[k]??=(ddOrder.push(k),{k,cd:0,cr:0,co:0,cu:0,cc:0,fd:0,fr:0,fo:0,fu:0,fc:0,em:0,last:false});
+    const c=cdm[d],f=fdm[d],e=EMAIL_DAILY[d];if(c){r.cd+=c[1];r.cr+=c[2];r.co+=c[3];r.cu+=c[4];r.cc+=c[5]}if(f){r.fd+=f[0];r.fr+=f[1];r.fo+=f[2];r.fu+=f[3];r.fc+=f[4]}if(e)r.em+=e[0];if(d>=fdCov[1])r.last=true}
+  const ddRows=ddOrder.map(k=>{const r=dd[k],tr=r.cr+r.fr;return {...r,start:k,label:(g==='day'?dow(k):blabel(k,g))+(r.last?' (partial)':''),tr,fshare:tr?r.fr/tr:0,copen:r.cd?r.cu/r.cd:null,cclick:r.cd?r.cc/r.cd:null,fopen:r.fd?r.fu/r.fd:null,fclick:r.fd?r.fc/r.fd:null}});
+  stacked($('ts_dd'),ddOrder,[{name:'Campaigns',vals:ddOrder.map(k=>dd[k].cr)},{name:'Flows',vals:ddOrder.map(k=>dd[k].fr)}],['#d95926','#3987e5'],{grain:g,
+    tip:i=>{const r=ddRows[i];return `<b>${longLabel(ddOrder[i],g)}</b><div class="tr"><span><i style="background:#d95926"></i>Campaign revenue</span><b>${f$(r.cr)}</b></div><div class="tr"><span><i style="background:#3987e5"></i>Flow revenue</span><b>${f$(r.fr)}</b></div><div class="tr"><span>Total</span><b>${f$(r.tr)}</b></div><div class="tr"><span>Campaign orders / flow orders</span><b>${fN(r.co)} / ${fN(r.fo)}</b></div><div class="tr"><span>Campaign emails delivered</span><b>${fN(r.cd)}</b></div><div class="tr"><span>Flow emails delivered</span><b>${fN(r.fd)}</b></div>`}});
+  legend($('lg_dd'),[['Campaign revenue','#d95926'],['Flow revenue','#3987e5']]);
+  $('dd_s').innerHTML=`Klaviyo Placed Order revenue by the day the order was placed, split into campaigns and flows, with emails delivered, unique opens and unique clicks that day. Open and click rates are that day's unique opens and clicks ÷ emails delivered that day, so for a single day they include people reacting to earlier sends; use the week or month view for steadier rates. Follows the date range and the Day/Week/Month toggle. ${fdCov[1]} is a partial day.`;
+  const sd=k=>ddRows.reduce((a,r)=>a+r[k],0);
+  table($('t_dd'),[{k:'start',h:'Period',f:(v,r)=>r.label},{k:'cd',h:'Campaign delivered',f:fN},{k:'copen',h:'Open %',f:dash(fP)},{k:'cclick',h:'Click %',f:dash(fP)},{k:'cr',h:'Campaign revenue',f:f$},{k:'co',h:'Orders',f:fN},
+    {k:'fd',h:'Flow delivered',f:fN},{k:'fopen',h:'Open %',f:dash(fP)},{k:'fclick',h:'Click %',f:dash(fP)},{k:'fr',h:'Flow revenue',f:f$},{k:'fo',h:'Orders',f:fN},
+    {k:'tr',h:'Total KL revenue',f:f$},{k:'fshare',h:'Flow share',f:v=>fP(v)+bar(v)},{k:'em',h:'Shopify email sales',f:f$}],ddRows,'start',
+    {total:{start:'Total',cd:fN(sd('cd')),copen:sd('cd')?fP(sd('cu')/sd('cd')):'–',cclick:sd('cd')?fP(sd('cc')/sd('cd')):'–',cr:f$(sd('cr')),co:fN(sd('co')),fd:fN(sd('fd')),fopen:sd('fd')?fP(sd('fu')/sd('fd')):'–',fclick:sd('fd')?fP(sd('fc')/sd('fd')):'–',
+      fr:f$(sd('fr')),fo:fN(sd('fo')),tr:f$(sd('tr')),fshare:sd('tr')?fP(sd('fr')/sd('tr')):'–',em:f$(sd('em'))}});
   /* sends table */
   const rows=ss.map(s=>({...s,openR:s.delivered?s.uopens/s.delivered:0,clickR:s.delivered?s.uclicks/s.delivered:0,unsubR:s.delivered?s.unsub/s.delivered:0,
     krev:s.hasRev?s.convValue:null,kord:s.hasRev?s.conv:null,kshare:s.hasRev&&campRev?s.convValue/campRev:null,kper1k:s.hasRev&&s.recipients?s.convValue/s.recipients*1000:null,
@@ -545,14 +566,14 @@ function renderKlaviyo(R){
   const lo=clo,hi=chi,sh={};
   for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||isSend(c.campaign))continue;
     const k=normFlow(c.campaign),a=sh[k]??={sales:0,sessions:0,orders:0,names:new Set()};a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.names.add(c.campaign)}
-  const fm={};fRows.forEach(x=>{const n=FD.flows[x[1]],r=fm[n]??={flow:n,deliveries:0,rev:0,orders:0};r.deliveries+=x[2];r.rev+=x[3];r.orders+=x[4]});
+  const fm={};fRows.forEach(x=>{const n=FD.flows[x[1]],r=fm[n]??={flow:n,deliveries:0,rev:0,orders:0,uo:0,uc:0};r.deliveries+=x[2];r.rev+=x[3];r.orders+=x[4];r.uo+=x[5];r.uc+=x[6]});
   const used=new Set(),frows=Object.values(fm).map(r=>{const k=normFlow(r.flow),s=sh[k];if(s)used.add(k);
-    return {...r,share:flowDel?r.deliveries/flowDel:0,rshare:flowRev?r.rev/flowRev:0,per1k:r.deliveries?r.rev/r.deliveries*1000:null,aov:r.orders?r.rev/r.orders:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
+    return {...r,openR:r.deliveries?r.uo/r.deliveries:null,clickR:r.deliveries?r.uc/r.deliveries:null,share:flowDel?r.deliveries/flowDel:0,rshare:flowRev?r.rev/flowRev:0,per1k:r.deliveries?r.rev/r.deliveries*1000:null,aov:r.orders?r.rev/r.orders:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
   $('fl_s').innerHTML=`Daily flow data from Klaviyo for ${cur[0]} → ${cur[1]}: deliveries are emails delivered and revenue is Placed Order attributed to the flow. Shopify columns are for ${lo} → ${hi}, matched by flow name. Follows the date range.`;
   const unmatched=Object.entries(sh).filter(([k])=>!used.has(k)).map(([k,v])=>({k,...v})).filter(v=>v.sales!==0||v.sessions>=50);
-  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'rev',h:'KL revenue',f:f$},{k:'rshare',h:'% of flow rev',f:v=>fP(v)+bar(v)},
+  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'openR',h:'Open %',f:dash(fP)},{k:'clickR',h:'Click %',f:dash(fP)},{k:'rev',h:'KL revenue',f:f$},{k:'rshare',h:'% of flow rev',f:v=>fP(v)+bar(v)},
     {k:'orders',h:'KL orders',f:fN},{k:'aov',h:'KL AOV',f:f$},{k:'per1k',h:'Rev / 1k deliveries',f:dash(f$)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'rev',
-    {total:{flow:'Total',deliveries:fN(flowDel),share:'100%',rev:f$(flowRev),rshare:'100%',orders:fN(flowOrd),aov:f$(flowOrd?flowRev/flowOrd:0),per1k:flowDel?f$(flowRev/flowDel*1000):'–',
+    {total:{flow:'Total',deliveries:fN(flowDel),share:'100%',openR:flowDel?fP(fRows.reduce((a,x)=>a+x[5],0)/flowDel):'–',clickR:flowDel?fP(fRows.reduce((a,x)=>a+x[6],0)/flowDel):'–',rev:f$(flowRev),rshare:'100%',orders:fN(flowOrd),aov:f$(flowOrd?flowRev/flowOrd:0),per1k:flowDel?f$(flowRev/flowDel*1000):'–',
       sess:fN(frows.reduce((a,f)=>a+(f.sess||0),0)),ord:fN(frows.reduce((a,f)=>a+(f.ord||0),0)),sal:f$(frows.reduce((a,f)=>a+(f.sal||0),0))}});
   $('fl_note').innerHTML=unmatched.length?`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`:'';
 }

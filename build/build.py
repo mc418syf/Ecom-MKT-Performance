@@ -147,7 +147,16 @@ if fdf:
     fdd = pd.read_csv(fdf[-1])
     fd_days, d_ix2 = table(fdd.Day)
     fd_flows, f_ix2 = table(fdd.Flow)
-    fd_rows = [[d_ix2[r[0]], f_ix2[r[2]], int(r[3]), round(float(r[4]), 2), int(r[5])] for r in fdd.itertuples(index=False)]
+    cols = list(fdd.columns)   # Day, Flow ID, Flow, Deliveries, Revenue, Orders, Opens, Unique opens, Clicks, Unique clicks
+    fd_rows = [[d_ix2[r[0]], f_ix2[r[2]], int(r[3]), round(float(r[4]), 2), int(r[5]),
+                int(r[7]) if len(r) > 7 else 0, int(r[9]) if len(r) > 9 else 0] for r in fdd.itertuples(index=False)]
+cd_days, cd_rows = [], []
+cdf = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaign_daily_*.csv")), key=end_of)
+if cdf:
+    cdd = pd.read_csv(cdf[-1])
+    cd_days = list(cdd.Day)
+    # Day, Deliveries, Revenue, Orders, Opens, Unique opens, Clicks, Unique clicks
+    cd_rows = [[i, int(r[1]), round(float(r[2]), 2), int(r[3]), int(r[5]), int(r[7])] for i, r in enumerate(cdd.itertuples(index=False))]
 kl_flows, flow_file = [], ""
 ff = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "flow-analytics_*.csv")), key=end_of)
 if ff:
@@ -156,7 +165,8 @@ if ff:
         kl_flows.append({"flow": str(r[1]), "revenue": float(r[2] or 0), "conv": int(r[3] or 0), "convRate": pct(r[4]),
                          "deliveries": int(r[5] or 0), "recipients": int(r[6] or 0)})
 klaviyo = {"campaigns": kl_campaigns, "flows": kl_flows, "flow_file": flow_file,
-           "flow_daily": {"days": fd_days, "flows": fd_flows, "rows": fd_rows, "fields": ["d", "flow", "deliveries", "revenue", "orders"]}}
+           "flow_daily": {"days": fd_days, "flows": fd_flows, "rows": fd_rows, "fields": ["d", "flow", "deliveries", "revenue", "orders", "uopens", "uclicks"]},
+           "campaign_daily": {"days": cd_days, "rows": cd_rows, "fields": ["d", "deliveries", "revenue", "orders", "uopens", "uclicks"]}}
 
 # ---------------------------------------------------------------- products (daily lines)
 P = load_folder("product", "Date", dtype={"SKU": str, "Size": str})
