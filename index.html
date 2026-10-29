@@ -57,7 +57,7 @@ select,input[type=text],input[type=date]{background:var(--bg-2);color:var(--text
 .sec-s{font-size:11.5px;color:var(--text-3);margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:right;padding:8px 9px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;border-bottom:1px solid var(--border-2);white-space:nowrap;cursor:pointer;background:var(--bg-1);position:sticky;top:0;z-index:1}
-th:first-child,td:first-child{text-align:left}th:hover,th.sorted{color:var(--accent)}
+th:first-child,td:first-child,th.l,td.l{text-align:left}th:hover,th.sorted{color:var(--accent)}
 td{padding:7px 9px;text-align:right;border-bottom:1px solid #191919;white-space:nowrap}
 tr:hover td{background:var(--bg-2)}
 tr.tot td{background:var(--bg-3);font-weight:700;border-top:1px solid var(--border-2)}
@@ -290,9 +290,9 @@ function table(el,cols,rows,sortKey,opt={}){
   const draw=()=>{
     rows.sort((a,b)=>{const x=a[st.k],y=b[st.k];return ((x==null)-(y==null))||(x>y?1:x<y?-1:0)}).valueOf();
     if(st.d<0)rows.reverse();
-    let h='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}" class="${st.k===c.k?'sorted':''}">${c.h}${st.k===c.k?(st.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr></thead><tbody>';
+    let h='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}" class="${st.k===c.k?'sorted':''} ${c.l||c.nm?'l':''}">${c.h}${st.k===c.k?(st.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr></thead><tbody>';
     rows.forEach((r,i)=>{
-      h+=`<tr class="${opt.detail?'drill':''}" data-i="${i}">`+cols.map(c=>`<td class="${c.nm?'nm':''}">${c.f?c.f(r[c.k],r):esc(r[c.k]??'')}</td>`).join('')+'</tr>';
+      h+=`<tr class="${opt.detail?'drill':''}" data-i="${i}">`+cols.map(c=>`<td class="${c.nm?'nm':''} ${c.l||c.nm?'l':''}">${c.f?c.f(r[c.k],r):esc(r[c.k]??'')}</td>`).join('')+'</tr>';
       if(open===i&&opt.detail)h+=`<tr class="det"><td colspan="${cols.length}"><div class="det-in">${opt.detail(r)}</div></td></tr>`});
     if(opt.total)h+=`<tr class="tot">`+cols.map(c=>`<td>${opt.total[c.k]??''}</td>`).join('')+'</tr>';
     el.innerHTML=h+'</tbody></table>';
@@ -303,10 +303,10 @@ function table(el,cols,rows,sortKey,opt={}){
 
 /* ---- charts ---- */
 function stacked(el,keys,series,colors,opt={}){ // keys: bucket keys; series: [{name,vals[]}]
-  const n=keys.length,W=Math.max(700,Math.min(1400,n*14+90)),H=230,pl=56;
+  const n=keys.length,W=Math.max(1200,Math.min(1600,n*14+90)),H=150,pl=56;
   const tot=keys.map((_,i)=>series.reduce((a,s)=>a+Math.max(0,s.vals[i]),0)),max=Math.max(1,...tot);
   const slot=(W-pl-10)/n,bw=Math.max(1.5,Math.min(60,slot-(slot>8?3:0)));
-  let svg=`<svg viewBox="0 0 ${W} ${H+34}" width="100%" style="min-width:${Math.min(W,700)}px" role="img">`;
+  let svg=`<svg viewBox="0 0 ${W} ${H+34}" width="100%" style="min-width:700px" role="img">`;
   for(let g=0;g<=3;g++){const y=H-g/3*(H-18);svg+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="#222"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${f$(max*g/3)}</text>`}
   const every=Math.ceil(n/Math.floor((W-pl)/70));
   keys.forEach((k,i)=>{const x=pl+i*slot+(slot-bw)/2;let y=H;
@@ -318,7 +318,7 @@ function stacked(el,keys,series,colors,opt={}){ // keys: bucket keys; series: [{
   el.innerHTML=svg+'</svg>';
 }
 function lines(el,keys,series,opt={}){
-  const n=keys.length,W=Math.max(700,n*90),H=220,pl=56,all=series.flatMap(s=>s.vals),max=Math.max(1,...all),slot=(W-pl-20)/Math.max(1,n-1);
+  const n=keys.length,W=Math.max(1200,n*90),H=150,pl=56,all=series.flatMap(s=>s.vals),max=Math.max(1,...all),slot=(W-pl-20)/Math.max(1,n-1);
   let svg=`<svg viewBox="0 0 ${W} ${H+32}" width="100%" style="min-width:600px" role="img">`;
   for(let g=0;g<=3;g++){const y=H-g/3*(H-18);svg+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="#222"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${opt.fmt?opt.fmt(max*g/3):f$(max*g/3)}</text>`}
   keys.forEach((k,i)=>svg+=`<text x="${pl+i*slot}" y="${H+16}" text-anchor="middle">${esc(k)}</text>`);
@@ -409,7 +409,7 @@ function renderChannels(T,Tc,Tp,R){
   const cols=first=>[...first,{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},{k:'chg',h:'vs CMP',f:chgH},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}];
   const tot={sales:f$(T.sales),share:'100%',orders:fN(T.orders),sessions:fN(T.sessions),cvr:fP(T.cvr),aov:f$(T.aov),newc:fN(T.newc),retc:fN(T.retc)};
   table($('t_grp'),cols([{k:'group',h:'Marketing channel',f:(v)=>`<span class="pill ${v==='Email'?'p-em':''}">${esc(v)}</span>`}]),mk(T.byGrp,'g'),'sales',{total:{...tot,group:'Total'}});
-  table($('t_ch'),cols([{k:'channel',h:'Source'},{k:'group',h:'Marketing channel'},{k:'traffic',h:'Type'}]),mk(T.bySrc,'s'),'sales',{total:{...tot,channel:'Total'},
+  table($('t_ch'),cols([{k:'channel',h:'Source'},{k:'group',h:'Marketing channel',l:1},{k:'traffic',h:'Type',l:1}]),mk(T.bySrc,'s'),'sales',{total:{...tot,channel:'Total'},
     detail:r=>dk('Source',esc(r.channel))+dk('Traffic type',esc(r.traffic))+dk('Sales per session',f$(r.sessions?r.sales/r.sessions:0))+dk('Share of sessions',fP(T.sessions?r.sessions/T.sessions:0))});
 }
 
@@ -425,7 +425,7 @@ function renderCampaigns(R){
     kpi('Dated sends',f$(sum(r=>r.type==='Send')),0,null,null,'',1,`${rows.filter(r=>r.type==='Send'&&r.sales>0).length} sends with sales`),
     kpi('Email (Klaviyo etc.)',f$(sum(r=>r.group==='Email')),0,null,null,'',1),kpi('Paid search + social',f$(sum(r=>r.group==='Paid Search'||r.group==='Paid Social')),0,null,null,'',1)].join('')
     .replace(/<div class="kpi-sub">.*?<\/div>/gs,'');
-  table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Source'},{k:'group',h:'Marketing channel'},{k:'type',h:'Type',f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
+  table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Source',l:1},{k:'group',h:'Marketing channel',l:1},{k:'type',h:'Type',l:1,f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
     {k:'sales',h:'Sales',f:f$},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}],
     rows,'sales',{total:{campaign:'Total',sales:f$(tot),orders:fN(rows.reduce((a,r)=>a+r.orders,0)),sessions:fN(rows.reduce((a,r)=>a+r.sessions,0))},
     detail:r=>dk('Campaign',esc(r.campaign))+dk('Sales per session',f$(r.sessions?r.sales/r.sessions:0))+dk('Sent',r.sent||'n/a')+dk('Days since send (range end)',r.sent?diffDays(r.sent,hi)+'d':'n/a')});
@@ -472,7 +472,7 @@ function renderProducts(R){
     return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,
       chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
   table($('t_pr'),[{k:'rank',h:'#'},{k:'title',h:'Product',nm:1,f:(v,r)=>(r.img?`<img class="thumb" loading="lazy" src="${esc(r.img)}" alt="">`:'')+esc(v)+(r.rel>r.net/2?' <span class="pill p-rel">release</span>':'')+(r.isNew?' <span class="pill p-new">new</span>':'')},
-    {k:'vendor',h:'Vendor'},{k:'dept',h:'Department'},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of range',f:v=>fP(v)+bar(v*5)},{k:'chg',h:'vs CMP',f:chgH},
+    {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of range',f:v=>fP(v)+bar(v*5)},{k:'chg',h:'vs CMP',f:chgH},
     {k:'rkChg',h:'Rank Δ',f:v=>v==null?'<span class="flat">–</span>':v===0?'<span class="flat">=</span>':`<span class="${v>0?'up':'dn'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},
     {k:'units',h:'Units',f:fN},{k:'asp',h:'Avg price',f:f$},{k:'mdS',h:'Markdown %',f:fP}],
     list,'net',{detail:r=>dk('SKU',esc(r.sku))+dk('Class',esc(r.cls))+dk('Release sales',f$(r.rel))+dk('Markdown sales',f$(r.md))+dk('Compare sales',ap&&ap[r.s]?f$(ap[r.s].net):'–')});
@@ -508,7 +508,7 @@ function renderCorr(R){
     return {date:s.date,campaign:s.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,''),vendor:v||'All vendors',sessions:s.sessions,sales:s.sales,orders:s.orders,pre,post,lift:pre?post/pre-1:null}});
   $('co_sd').innerHTML='';
   if(!sd.length)$('co_sd').innerHTML=`<div class="note warn">No dated Klaviyo sends with campaign data fall inside the selected range. Campaign data covers ${COV.ca[0]} → ${COV.ca[1]}.</div>`;
-  else table($('co_sd'),[{k:'date',h:'Send date'},{k:'campaign',h:'Campaign',nm:1},{k:'vendor',h:'Vendor matched'},{k:'sessions',h:'Sessions',f:fN},{k:'orders',h:'Orders',f:fN},{k:'sales',h:'Attributed sales',f:f$},
+  else table($('co_sd'),[{k:'date',h:'Send date'},{k:'campaign',h:'Campaign',nm:1},{k:'vendor',h:'Vendor matched',l:1},{k:'sessions',h:'Sessions',f:fN},{k:'orders',h:'Orders',f:fN},{k:'sales',h:'Attributed sales',f:f$},
     {k:'pre',h:'Vendor $/day before',f:f$},{k:'post',h:'$/day send + 2d',f:f$},{k:'lift',h:'Lift',f:chgH}],sd,'date');
   /* heatmap */
   const hd=cur[1]>=cur[0]&&diffDays(cur[0],cur[1])<=30?cur:[addDays(cur[1],-30),cur[1]],hdays=[];for(let d=hd[0];d<=hd[1];d=addDays(d,1))hdays.push(d);
