@@ -68,9 +68,12 @@ for wd in sorted(glob.glob(os.path.join(ROOT, "data", "*"))):
                                   release_sales=("Net Sales", lambda s: s[p.loc[s.index, "Release"] == "Release"].sum()),
                                   md_sales=("Net Sales", lambda s: s[p.loc[s.index, "Status"] == "Markdowns"].sum()))
                .reset_index().to_dict("records"))
-    sku = (p.groupby(["SKU", "Product Title", "Product Vendor", "Department", "Release"], as_index=False)
-             .agg(sales=("Net Sales", "sum"), units=("Net Quantity", "sum")).sort_values("sales", ascending=False))
-    top = sku.head(15)
+    p["md_sales"] = p["Net Sales"].where(p.Status == "Markdowns", 0.0)
+    sku = (p.groupby(["SKU", "Product Title", "Product Vendor", "Department", "CLASS", "Release"], as_index=False)
+             .agg(sales=("Net Sales", "sum"), units=("Net Quantity", "sum"), md_sales=("md_sales", "sum"),
+                  price=("Product Price", "max"))
+             .sort_values("sales", ascending=False))
+    top = sku.head(40)
     sku_day = (p[p.SKU.isin(top.SKU)].groupby(["SKU", "day"], as_index=False)
                  .agg(sales=("Net Sales", "sum"), units=("Net Quantity", "sum")))
     vendor = (p.groupby("Product Vendor", as_index=False).agg(sales=("Net Sales", "sum"), units=("Net Quantity", "sum"))

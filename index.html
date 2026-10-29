@@ -1,146 +1,375 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Livestock Marketing Performance</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing & Product Performance · Livestock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f6f4;--card:#fff;--ink:#16181d;--mute:#6b7280;--line:#e4e4e0;--a:#1f4fd8;--b:#e07a1f;--good:#0f8a4f;--bad:#c4302b}
-@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1b1d22;--ink:#eceef2;--mute:#9aa1ad;--line:#2b2e35;--a:#6d8fff;--b:#f0a252;--good:#3ec585;--bad:#ff6b63}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
-header,main{max-width:1200px;margin:0 auto;padding:16px}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
-h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
-.sub{color:var(--mute);font-size:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;overflow-x:auto}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
-.kpi .l{color:var(--mute);font-size:12px}.kpi .v{font-size:22px;font-weight:650;margin:2px 0}.kpi .d{font-size:12px;color:var(--mute)}
-table{border-collapse:collapse;width:100%}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-th:first-child,td:first-child{text-align:left}th{color:var(--mute);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
-td.t{white-space:normal;min-width:200px;max-width:380px}
-.pill{font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
-.warn{border-left:4px solid var(--b)}.warn li{margin:4px 0}
-select{font:inherit;padding:4px 8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px}
-.legend span{margin-right:12px;font-size:12px}.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
-.cell{text-align:center;font-size:11px;min-width:54px}
-svg text{fill:var(--mute);font-size:11px}
+:root{--accent:#f2efe6;--bg:#000;--bg-1:#0a0a0a;--bg-2:#141414;--bg-3:#1c1c1c;--border:#2a2a2a;--border-2:#3a3a3a;
+--text:#fff;--text-2:#b8b8b8;--text-3:#8a8a86;--text-4:#555;--good:#6BCB77;--good-bg:rgba(107,203,119,.12);
+--bad:#FF6B6B;--bad-bg:rgba(255,107,107,.12);--blue:#3987e5;--orange:#d95926;--amber:#f5b83d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Barlow',system-ui,sans-serif;font-size:14px;line-height:1.45}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:var(--bg-1)}
+::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:4px}
+.header{border-bottom:1px solid var(--border);padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
+.header-brand{font-size:10px;letter-spacing:.22em;color:var(--accent);font-weight:700}
+.header h1{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:800;text-transform:uppercase;line-height:1;margin-top:4px}
+.header-meta{font-size:11px;color:var(--text-3);margin-top:7px}
+.header-logo img{height:40px;display:block;filter:invert(1)}
+.header-stripe{height:4px;background:var(--accent)}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:0 20px;background:var(--bg-1);position:sticky;top:0;z-index:40}
+.tab{padding:13px 18px;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:inherit}
+.tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.ctl{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;padding:14px 28px;background:var(--bg-1);border-bottom:1px solid var(--border)}
+.ctl-g{display:flex;flex-direction:column;gap:5px}
+.ctl-l{font-size:9px;letter-spacing:.16em;color:var(--text-3);text-transform:uppercase;font-weight:700}
+.seg{display:flex;border:1px solid var(--border-2);border-radius:3px;overflow:hidden}
+.seg button{background:var(--bg-2);color:var(--text-2);border:none;padding:6px 13px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;border-right:1px solid var(--border-2)}
+.seg button:last-child{border-right:none}.seg button.on{background:var(--accent);color:#000}
+select,input[type=text]{background:var(--bg-2);color:var(--text);border:1px solid var(--border-2);border-radius:3px;padding:6px 9px;font-family:inherit;font-size:12px;min-width:120px}
+.nav-b{background:var(--bg-2);border:1px solid var(--border-2);color:var(--text);padding:6px 10px;cursor:pointer;border-radius:3px;font-size:12px}
+.nav-b:hover{border-color:var(--accent);color:var(--accent)}.nav-b:disabled{opacity:.35;cursor:default}
+.per-label{font-size:12px;color:var(--text-2)}.per-label b{color:var(--accent)}
+.kpi-strip{background:var(--bg);border-bottom:1px solid var(--border)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:10px;padding:18px 28px 0}
+.kpis.mini{grid-template-columns:repeat(auto-fit,minmax(152px,1fr));padding:10px 28px 18px}
+.kpi{background:var(--bg-1);border:1px solid var(--border);border-radius:4px;padding:13px 15px 12px;position:relative;overflow:hidden}
+.kpi.hero:before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent)}
+.kpi.mini{background:var(--bg);padding:11px 13px 10px}
+.kpi-label{font-size:8.5px;letter-spacing:.15em;color:var(--text-3);text-transform:uppercase;font-weight:700;line-height:1.3;min-height:22px}
+.kpi.mini .kpi-label{min-height:0}
+.kpi-value{font-family:'Barlow Condensed',sans-serif;font-size:31px;font-weight:700;line-height:1;margin-top:4px}
+.kpi.mini .kpi-value{font-size:22px}
+.kpi-sub{margin-top:9px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.dch{display:inline-flex;align-items:baseline;gap:5px;background:var(--bg-3);border-radius:3px;padding:2px 6px;white-space:nowrap;line-height:1.5}
+.dch em{font-style:normal;font-size:8px;letter-spacing:.1em;color:var(--text-4);font-weight:800}
+.dch b{font-size:10.5px;font-weight:600}
+.kpi-note{font-size:10px;color:var(--text-3);margin-top:8px}
+.up{color:var(--good)}.dn{color:var(--bad)}.flat{color:var(--text-3)}
+.sec{padding:22px 28px;border-bottom:1px solid var(--border)}
+.sec-h{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+.sec-s{font-size:11.5px;color:var(--text-3);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:right;padding:8px 9px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);font-weight:700;border-bottom:1px solid var(--border-2);white-space:nowrap;cursor:pointer;background:var(--bg-1);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}th:hover,th.sorted{color:var(--accent)}
+td{padding:7px 9px;text-align:right;border-bottom:1px solid #191919;white-space:nowrap}
+tr:hover td{background:var(--bg-2)}
+tr.tot td{background:var(--bg-3);font-weight:700;border-top:1px solid var(--border-2)}
+.tw{max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:3px}
+.nm{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:1px 6px;border-radius:2px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(242,239,230,.12);color:var(--accent)}
+.p-paid{background:rgba(57,135,229,.18);color:var(--blue)}.p-org{background:rgba(107,203,119,.14);color:var(--good)}
+.p-rel{background:rgba(217,89,38,.2);color:#f08a5f}.p-md{background:var(--bad-bg);color:var(--bad)}
+.chart-wrap{background:var(--bg-1);border:1px solid var(--border);border-radius:3px;padding:14px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--text-2);margin-bottom:10px}
+.legend i{display:inline-block;width:11px;height:8px;margin-right:6px;vertical-align:middle;border-radius:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.note{background:var(--bg-2);border-left:3px solid var(--accent);padding:11px 14px;font-size:11.5px;color:var(--text-2);border-radius:0 3px 3px 0;margin-bottom:8px}
+.note b{color:var(--text)}
+.sig{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:10px;padding:18px 28px;border-bottom:1px solid var(--border);background:var(--bg-1)}
+.sig-c{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.sig-t{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:800}
+.sig-v{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;margin:6px 0 5px;line-height:1}
+.sig-d{font-size:11.5px;color:var(--text-3);line-height:1.45}
+.drill{cursor:pointer}.drill:hover td:first-child{color:var(--accent)}
+.det td{background:var(--bg-2)!important;padding:0}
+.det-in{padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;font-size:11.5px;text-align:left}
+.det-k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+.det-v{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:600;margin-top:2px;line-height:1.2;white-space:normal}
+.bar{height:5px;background:var(--bg-3);border-radius:2px;overflow:hidden;margin-top:3px;min-width:52px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.foot{padding:20px 28px;color:var(--text-3);font-size:11px;line-height:1.6}
+.note-ta{width:100%;min-height:110px;background:var(--bg-1);color:var(--text);border:1px solid var(--border-2);border-radius:4px;padding:11px 13px;font-family:'Barlow',sans-serif;font-size:12.5px;line-height:1.55;resize:vertical}
+.note-ta:focus{outline:none;border-color:var(--accent)}
+.nt-k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:800;margin:12px 0 5px}
+.btn{background:var(--bg-2);border:1px solid var(--border-2);color:var(--text);padding:6px 13px;cursor:pointer;border-radius:3px;font:600 11px 'Barlow',sans-serif;letter-spacing:.08em;text-transform:uppercase;margin-right:8px;margin-top:10px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg-2);border:1px solid var(--border-2);border-radius:14px;padding:4px 11px;font-size:11px;color:var(--text-2);cursor:pointer;user-select:none}
+.chip:hover{border-color:var(--accent)}.chip input{accent-color:#f2efe6;margin:0}
+.cell{text-align:center;font-size:11px;min-width:60px}
+svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
 </style>
 </head>
 <body>
-<header>
-  <div><h1>Livestock · Marketing &amp; Product Performance</h1>
-  <div class="sub" id="meta"></div></div>
-  <label class="sub">Week <select id="wk"></select></label>
-</header>
-<main>
-  <div class="kpis" id="kpis"></div>
+<div class="header">
+  <div>
+    <div class="header-brand">LIVESTOCK · MARKETING PERFORMANCE</div>
+    <h1>Channel &amp; Product Performance</h1>
+    <div class="header-meta" id="hdrMeta"></div>
+  </div>
+  <div class="header-logo"><img src="assets/livestock-logo.png" alt="Livestock"></div>
+</div>
+<div class="header-stripe"></div>
 
-  <div class="card"><h2>Daily product net sales</h2>
-    <div class="legend" id="legend"></div><div id="timeline"></div></div>
+<div class="tabs" id="tabBar">
+  <button class="tab active" data-t="sm">Summary</button>
+  <button class="tab" data-t="ch">Channels</button>
+  <button class="tab" data-t="ca">Campaigns</button>
+  <button class="tab" data-t="pr">Products</button>
+  <button class="tab" data-t="hm">Product × Day</button>
+  <button class="tab" data-t="me">Method</button>
+</div>
 
-  <div class="card"><h2>Top products × day <span class="sub">(net sales, top 15 SKUs)</span></h2><div id="heat"></div></div>
+<div class="ctl">
+  <div class="ctl-g"><div class="ctl-l">Trend grain</div>
+    <div class="seg" id="grainSeg"><button data-g="day" class="on">Day</button><button data-g="week">Week</button></div></div>
+  <div class="ctl-g"><div class="ctl-l">Period (Sun–Sat week)</div>
+    <div style="display:flex;gap:6px"><button class="nav-b" id="prevP">◀</button><select id="periodSel"></select><button class="nav-b" id="nextP">▶</button></div></div>
+  <div class="ctl-g"><div class="ctl-l">Comparing to</div><div class="per-label" id="cmpLabel"></div></div>
+</div>
 
-  <div class="card"><h2>Channels <span class="sub">last non-direct click, weekly total</span></h2><div id="channels"></div></div>
-  <div class="card"><h2>Campaigns <span class="sub">Klaviyo clones merged; top 25 by sales</span></h2><div id="campaigns"></div></div>
-  <div class="card"><h2>Vendors</h2><div id="vendors"></div></div>
-  <div class="card warn"><h2>Data checks &amp; limits</h2><ul id="checks"></ul></div>
-</main>
+<!-- SUMMARY -->
+<div class="tab-panel active" id="p_sm">
+  <div class="kpi-strip"><div class="kpis" id="k_hero"></div><div class="kpis mini" id="k_mini"></div></div>
+  <div class="sig" id="signals"></div>
+  <div class="sec"><div class="sec-h">Daily product net sales</div>
+    <div class="sec-s">Release SKUs vs regular SKUs. Product data is daily; channel and campaign exports are weekly totals.</div>
+    <div class="chart-wrap"><div class="legend" id="lg_sm"></div><div id="ts_sm"></div></div></div>
+  <div class="sec"><div class="sec-h">What · So What · What's Next</div>
+    <div class="sec-s">Commentary for the selected week. Saved in this browser only.</div>
+    <div class="nt-k">What happened</div><textarea class="note-ta" id="nt_what"></textarea>
+    <div class="nt-k">So what</div><textarea class="note-ta" id="nt_so"></textarea>
+    <div class="nt-k">What's next</div><textarea class="note-ta" id="nt_next"></textarea>
+    <button class="btn" id="saveNotes">Save</button><button class="btn" id="copyNotes">Copy</button><button class="btn" id="resetNotes">Reset</button><span class="sec-s" id="saveMsg"></span></div>
+</div>
+
+<!-- CHANNELS -->
+<div class="tab-panel" id="p_ch">
+  <div class="kpi-strip"><div class="kpis" id="k_ch"></div></div>
+  <div class="sec"><div class="sec-h">Channel detail</div><div class="sec-s">Last non-direct click, weekly total. Click a column to sort.</div><div class="tw" id="t_ch"></div></div>
+  <div class="sec"><div class="sec-h">Traffic type</div><div class="sec-s">Paid, organic and unclassified traffic across the week.</div><div id="t_tt"></div></div>
+</div>
+
+<!-- CAMPAIGNS -->
+<div class="tab-panel" id="p_ca">
+  <div class="kpi-strip"><div class="kpis" id="k_ca"></div></div>
+  <div class="sec"><div class="sec-h">Campaign detail</div><div class="sec-s">Klaviyo clones merged into the original send. "Send" = campaign with a dated name; "Always-on / other" = everything else. Click a row for detail.</div><div class="tw" id="t_ca"></div></div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="tab-panel" id="p_pr">
+  <div class="kpi-strip"><div class="kpis" id="k_pr"></div></div>
+  <div class="sec"><div class="sec-h">Top products</div><div class="sec-s">Top 40 SKUs by net sales for the loaded product file. Click a row for detail.</div>
+    <div class="chips"><input type="text" id="q_pr" placeholder="Search product or vendor"><label class="chip"><input type="checkbox" id="f_rel"> Release only</label><label class="chip"><input type="checkbox" id="f_md"> Has markdown sales</label></div>
+    <div class="tw" id="t_pr"></div></div>
+  <div class="sec"><div class="sec-h">Vendors</div><div id="t_vn"></div></div>
+</div>
+
+<!-- HEATMAP -->
+<div class="tab-panel" id="p_hm">
+  <div class="sec"><div class="sec-h">Top 15 products × day</div><div class="sec-s">Net sales by SKU and day, shaded by size. Compare against campaign send dates on the Campaigns tab.</div><div class="tw" id="hm"></div></div>
+  <div class="sec"><div class="sec-h">Campaign sends in this window</div><div class="sec-s">Klaviyo sends whose dated name falls inside the week or the days before it.</div><div id="sends"></div></div>
+</div>
+
+<!-- METHOD -->
+<div class="tab-panel" id="p_me">
+  <div class="sec"><div class="sec-h">Method and data lineage</div><div id="me_list"></div></div>
+  <div class="sec"><div class="sec-h">Weekly refresh</div>
+    <div class="note">Add <b>data/&lt;week&gt;/</b> with <b>channel_</b>, <b>campaign_</b> and <b>product_sales_</b> CSVs (date range in each name), then run <b>python3 build/build.py</b>. Weeks start Sunday; times are America/Vancouver.</div></div>
+</div>
+<div class="foot" id="foot"></div>
+
 <script>
-const DATA = {"banner": "Livestock", "tz": "America/Vancouver", "week_start": "Sunday", "weeks": [{"start": "2026-10-18", "end": "2026-10-24", "channels": [{"channel": "google", "traffic": "organic", "sales": 23145.89, "sessions": 6883, "orders": 113, "new_cust": 35, "ret_cust": 78}, {"channel": "klaviyo", "traffic": "paid", "sales": 11524.06, "sessions": 4771, "orders": 41, "new_cust": 4, "ret_cust": 37}, {"channel": "google_ads", "traffic": "paid", "sales": 10342.47, "sessions": 4015, "orders": 46, "new_cust": 26, "ret_cust": 20}, {"channel": "meta_ads", "traffic": "paid", "sales": 2654.07, "sessions": 6529, "orders": 15, "new_cust": 9, "ret_cust": 6}, {"channel": "linktr", "traffic": "organic", "sales": 2576.6, "sessions": 1087, "orders": 11, "new_cust": 3, "ret_cust": 8}, {"channel": "instagram", "traffic": "organic", "sales": 2156.03, "sessions": 1039, "orders": 7, "new_cust": 2, "ret_cust": 5}, {"channel": "store_3555", "traffic": "unknown", "sales": 1070.55, "sessions": 15, "orders": 3, "new_cust": 2, "ret_cust": 1}, {"channel": "unknown", "traffic": "unknown", "sales": 858.93, "sessions": 111, "orders": 3, "new_cust": 2, "ret_cust": 1}, {"channel": "bing", "traffic": "organic", "sales": 634.5, "sessions": 128, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"channel": "spently", "traffic": "paid", "sales": 546.46, "sessions": 20, "orders": 4, "new_cust": 1, "ret_cust": 3}, {"channel": "sneakersynclabs", "traffic": "organic", "sales": 535.5, "sessions": 3, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "valuecom", "traffic": "organic", "sales": 521.15, "sessions": 2, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"channel": "chatgpt", "traffic": "organic", "sales": 475.57, "sessions": 216, "orders": 3, "new_cust": 3, "ret_cust": 0}, {"channel": "couponbirds", "traffic": "organic", "sales": 336.35, "sessions": 2, "orders": 2, "new_cust": 2, "ret_cust": 0}, {"channel": "shopify", "traffic": "organic", "sales": 322.05, "sessions": 30, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"channel": "facebook", "traffic": "organic", "sales": 319.2, "sessions": 361, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "shopify_email", "traffic": "unknown", "sales": 295.0, "sessions": 151, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "afterpay", "traffic": "organic", "sales": 248.6, "sessions": 5, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "zephr", "traffic": "organic", "sales": 203.4, "sessions": 8, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "afterpay", "traffic": "unknown", "sales": 192.1, "sessions": 81, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "duckduckgo", "traffic": "organic", "sales": 179.2, "sessions": 61, "orders": 1, "new_cust": 0, "ret_cust": 1}], "channel_tail": {"channel": "72 other sources (no sales)", "traffic": "mixed", "sales": 0.0, "sessions": 814, "orders": 0, "new_cust": 0, "ret_cust": 0}, "adjustments": [{"channel": "goodsearch", "sales": -132.25}, {"channel": "unattributed", "sales": -312.7}], "campaigns": [{"campaign": "organic", "channel": "google", "traffic": "organic", "sales": 23145.89, "sessions": 6883, "orders": 113, "new_cust": 35, "ret_cust": 78}, {"campaign": "branded_search", "channel": "google_ads", "traffic": "paid", "sales": 7801.28, "sessions": 1275, "orders": 29, "new_cust": 13, "ret_cust": 16}, {"campaign": "2026_10_16_adidas_SFTM_Release", "channel": "klaviyo", "traffic": "paid", "sales": 4361.2, "sessions": 1245, "orders": 16, "new_cust": 2, "ret_cust": 14}, {"campaign": "organic", "channel": "linktr", "traffic": "organic", "sales": 2576.6, "sessions": 1087, "orders": 11, "new_cust": 3, "ret_cust": 8}, {"campaign": "organic", "channel": "instagram", "traffic": "organic", "sales": 2156.03, "sessions": 1039, "orders": 7, "new_cust": 2, "ret_cust": 5}, {"campaign": "2026_10_22_Jellyfish_release", "channel": "klaviyo", "traffic": "paid", "sales": 1719.65, "sessions": 425, "orders": 4, "new_cust": 0, "ret_cust": 4}, {"campaign": "tof_bof_combined_conversions", "channel": "meta_ads", "traffic": "paid", "sales": 1433.97, "sessions": 4051, "orders": 9, "new_cust": 5, "ret_cust": 4}, {"campaign": "shop_inline", "channel": "google_ads", "traffic": "paid", "sales": 1418.31, "sessions": 1334, "orders": 9, "new_cust": 7, "ret_cust": 2}, {"campaign": "2026_10_22_Clarks_New_Balance", "channel": "klaviyo", "traffic": "paid", "sales": 1344.48, "sessions": 598, "orders": 5, "new_cust": 0, "ret_cust": 5}, {"campaign": "sales_adv_", "channel": "meta_ads", "traffic": "paid", "sales": 1220.1, "sessions": 2475, "orders": 6, "new_cust": 4, "ret_cust": 2}, {"campaign": "2026_10_14_New_Arrivals", "channel": "klaviyo", "traffic": "paid", "sales": 1144.39, "sessions": 68, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"campaign": "2026_10_20_New_Arrivals", "channel": "klaviyo", "traffic": "paid", "sales": 1137.95, "sessions": 899, "orders": 4, "new_cust": 0, "ret_cust": 4}, {"campaign": "shop-inline_ca_us", "channel": "google_ads", "traffic": "paid", "sales": 797.13, "sessions": 1255, "orders": 6, "new_cust": 6, "ret_cust": 0}, {"campaign": "organic", "channel": "bing", "traffic": "organic", "sales": 634.5, "sessions": 128, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"campaign": "Spently Draft Order Email", "channel": "spently", "traffic": "paid", "sales": 546.46, "sessions": 5, "orders": 4, "new_cust": 1, "ret_cust": 3}, {"campaign": "organic", "channel": "sneakersynclabs", "traffic": "organic", "sales": 535.5, "sessions": 3, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "organic", "channel": "valuecom", "traffic": "organic", "sales": 521.15, "sessions": 2, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "chatgpt", "traffic": "organic", "sales": 475.57, "sessions": 201, "orders": 3, "new_cust": 3, "ret_cust": 0}, {"campaign": "2026_10_10_Hellstar_adidas", "channel": "klaviyo", "traffic": "paid", "sales": 468.95, "sessions": 10, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "2026_10_11_Salomon_Casio", "channel": "klaviyo", "traffic": "paid", "sales": 440.7, "sessions": 99, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "organic", "channel": "couponbirds", "traffic": "organic", "sales": 336.35, "sessions": 2, "orders": 2, "new_cust": 2, "ret_cust": 0}, {"campaign": "CART ABANDONMENT_1", "channel": "klaviyo", "traffic": "paid", "sales": 322.22, "sessions": 3, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "shopify", "traffic": "organic", "sales": 322.05, "sessions": 30, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "facebook", "traffic": "organic", "sales": 319.2, "sessions": 360, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "2026_09_26_Kobe_&_badbo", "channel": "klaviyo", "traffic": "paid", "sales": 265.55, "sessions": 9, "orders": 1, "new_cust": 1, "ret_cust": 0}], "campaign_adjustments": [{"campaign": "2026_09_24_Gramicci_Editorial", "channel": "klaviyo", "sales": -97.73}, {"campaign": "2026_09_08_New_Arrivals", "channel": "klaviyo", "sales": -100.0}, {"campaign": "organic", "channel": "goodsearch", "sales": -132.25}], "attributed_total": 59137.68, "attributed_net_of_adj": 58692.73, "paid_spend_filled": false, "product_daily": [{"day": "2026-10-18", "sales": 5120.0, "units": 37, "release_sales": 1485.0, "md_sales": 1215.0}, {"day": "2026-10-19", "sales": 4034.5, "units": 22, "release_sales": 1810.0, "md_sales": 704.5}, {"day": "2026-10-20", "sales": 5596.84, "units": 39, "release_sales": 1765.0, "md_sales": 1312.4}, {"day": "2026-10-21", "sales": 10991.0, "units": 55, "release_sales": 9110.0, "md_sales": 1455.0}, {"day": "2026-10-22", "sales": 8426.2, "units": 46, "release_sales": 5080.0, "md_sales": 1081.5}, {"day": "2026-10-23", "sales": 6017.75, "units": 38, "release_sales": 1676.75, "md_sales": 750.0}, {"day": "2026-10-24", "sales": 59165.0, "units": 207, "release_sales": 55865.0, "md_sales": 1625.0}, {"day": "2026-10-25", "sales": 10236.8, "units": 58, "release_sales": 5010.0, "md_sales": 1940.0}], "product_total_in_window": 99351.29, "product_total_all": 109588.09, "product_units_in_window": 444, "product_rows": 1106, "product_exact_dupe_rows": 566, "top_products": [{"SKU": "00050462", "Product Title": "adidas PW Adistar Jellyfish Red / Black - Team Victory Red", "Product Vendor": "adidas", "Department": "Mens Footwear", "Release": "Release", "sales": 30420.0, "units": 78}, {"SKU": "00052127", "Product Title": "Jordan 1 High OG Black / Game Royal - White", "Product Vendor": "Jordan", "Department": "Mens Footwear", "Release": "Release", "sales": 21150.0, "units": 90}, {"SKU": "00056204", "Product Title": "Jordan x J Balvin 4 Retro Lemonade / Lemonade", "Product Vendor": "Jordan", "Department": "Mens Footwear", "Release": "Release", "sales": 11970.0, "units": 42}, {"SKU": "00050463", "Product Title": "adidas PW Adistar Jellyfish Onyx / Aurora Onyx - Black", "Product Vendor": "adidas", "Department": "Mens Footwear", "Release": "Release", "sales": 7020.0, "units": 18}, {"SKU": "00052234", "Product Title": "Nike Vomero Premium SP Skeleton Black / Black - Iron Grey", "Product Vendor": "Nike", "Department": "Mens Footwear", "Release": "Release", "sales": 3291.75, "units": 12}, {"SKU": "00051616", "Product Title": "adidas x Song for the Mute SL72 Pro Collegiate Green", "Product Vendor": "adidas", "Department": "Mens Footwear", "Release": "Release", "sales": 3050.0, "units": 18}, {"SKU": "00051617", "Product Title": "adidas x Song for the Mute SL72 Pro / Off White", "Product Vendor": "adidas", "Department": "Mens Footwear", "Release": "Release", "sales": 1360.0, "units": 8}, {"SKU": "00050041", "Product Title": "Salomon XT-6 White / Excalibur - Paloma", "Product Vendor": "Salomon", "Department": "Mens Footwear", "Release": "Regular", "sales": 1150.0, "units": 5}, {"SKU": "00050567", "Product Title": "New Balance Made in USA 992 Core Black / White", "Product Vendor": "New Balance", "Department": "Mens Footwear", "Release": "Regular", "sales": 1100.0, "units": 4}, {"SKU": "00049971", "Product Title": "Salomon XT-6 Pearl Blue / Grisaille", "Product Vendor": "Salomon", "Department": "Mens Footwear", "Release": "Regular", "sales": 690.0, "units": 3}, {"SKU": "00050044", "Product Title": "Salomon XT-6 GTX Vanilla Ice / Bog - Shadow Green", "Product Vendor": "Salomon", "Department": "Mens Footwear", "Release": "Regular", "sales": 690.0, "units": 3}, {"SKU": "00051743", "Product Title": "Casio AQ230EGL-9A Gold / Brown", "Product Vendor": "Casio", "Department": "Other Accessories", "Release": "Regular", "sales": 690.0, "units": 6}, {"SKU": "00053691", "Product Title": "Nike Air Max Goadome Low SP Black / Black - Black", "Product Vendor": "Nike", "Department": "Mens Footwear", "Release": "Regular", "sales": 645.0, "units": 3}, {"SKU": "00050552", "Product Title": "ASICS NOVABLAST 6 Black / Black", "Product Vendor": "ASICS", "Department": "Mens Footwear", "Release": "Regular", "sales": 600.0, "units": 4}, {"SKU": "00050497", "Product Title": "norda 001A / Black", "Product Vendor": "norda", "Department": "Mens Footwear", "Release": "Regular", "sales": 600.0, "units": 3}], "top_product_daily": [{"SKU": "00049971", "day": "2026-10-20", "sales": 230.0, "units": 1}, {"SKU": "00049971", "day": "2026-10-21", "sales": 230.0, "units": 1}, {"SKU": "00049971", "day": "2026-10-23", "sales": 230.0, "units": 1}, {"SKU": "00050041", "day": "2026-10-22", "sales": 460.0, "units": 2}, {"SKU": "00050041", "day": "2026-10-25", "sales": 690.0, "units": 3}, {"SKU": "00050044", "day": "2026-10-24", "sales": 230.0, "units": 1}, {"SKU": "00050044", "day": "2026-10-25", "sales": 460.0, "units": 2}, {"SKU": "00050462", "day": "2026-10-24", "sales": 30420.0, "units": 78}, {"SKU": "00050463", "day": "2026-10-24", "sales": 5850.0, "units": 15}, {"SKU": "00050463", "day": "2026-10-25", "sales": 1170.0, "units": 3}, {"SKU": "00050497", "day": "2026-10-18", "sales": 200.0, "units": 1}, {"SKU": "00050497", "day": "2026-10-19", "sales": 200.0, "units": 1}, {"SKU": "00050497", "day": "2026-10-21", "sales": 200.0, "units": 1}, {"SKU": "00050552", "day": "2026-10-23", "sales": 300.0, "units": 2}, {"SKU": "00050552", "day": "2026-10-24", "sales": 150.0, "units": 1}, {"SKU": "00050552", "day": "2026-10-25", "sales": 150.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-18", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-23", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-24", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-25", "sales": 275.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-18", "sales": 340.0, "units": 2}, {"SKU": "00051616", "day": "2026-10-19", "sales": 850.0, "units": 5}, {"SKU": "00051616", "day": "2026-10-20", "sales": 1020.0, "units": 6}, {"SKU": "00051616", "day": "2026-10-21", "sales": 170.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-22", "sales": 160.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-23", "sales": 340.0, "units": 2}, {"SKU": "00051616", "day": "2026-10-24", "sales": 170.0, "units": 1}, {"SKU": "00051617", "day": "2026-10-18", "sales": 170.0, "units": 1}, {"SKU": "00051617", "day": "2026-10-19", "sales": 850.0, "units": 5}, {"SKU": "00051617", "day": "2026-10-22", "sales": 0.0, "units": 0}, {"SKU": "00051617", "day": "2026-10-24", "sales": 340.0, "units": 2}, {"SKU": "00051743", "day": "2026-10-18", "sales": -115.0, "units": -1}, {"SKU": "00051743", "day": "2026-10-19", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-20", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-22", "sales": 230.0, "units": 2}, {"SKU": "00051743", "day": "2026-10-23", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-24", "sales": 230.0, "units": 2}, {"SKU": "00052127", "day": "2026-10-24", "sales": 18330.0, "units": 78}, {"SKU": "00052127", "day": "2026-10-25", "sales": 2820.0, "units": 12}, {"SKU": "00052234", "day": "2026-10-22", "sales": 2280.0, "units": 8}, {"SKU": "00052234", "day": "2026-10-23", "sales": 726.75, "units": 3}, {"SKU": "00052234", "day": "2026-10-25", "sales": 285.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-20", "sales": 215.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-22", "sales": 215.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-23", "sales": 215.0, "units": 1}, {"SKU": "00056204", "day": "2026-10-21", "sales": 8550.0, "units": 30}, {"SKU": "00056204", "day": "2026-10-22", "sales": 1995.0, "units": 7}, {"SKU": "00056204", "day": "2026-10-23", "sales": 285.0, "units": 1}, {"SKU": "00056204", "day": "2026-10-24", "sales": 855.0, "units": 3}, {"SKU": "00056204", "day": "2026-10-25", "sales": 285.0, "units": 1}], "vendors": [{"Product Vendor": "adidas", "sales": 45893.0, "units": 152}, {"Product Vendor": "Jordan", "sales": 33390.0, "units": 133}, {"Product Vendor": "Nike", "sales": 6811.25, "units": 37}, {"Product Vendor": "Salomon", "sales": 4260.0, "units": 19}, {"Product Vendor": "ASICS", "sales": 3205.0, "units": 23}, {"Product Vendor": "New Balance", "sales": 2355.0, "units": 12}, {"Product Vendor": "Carhartt WIP", "sales": 1714.0, "units": 11}, {"Product Vendor": "Casio", "sales": 1520.0, "units": 14}, {"Product Vendor": "Arc'teryx", "sales": 1205.0, "units": 11}, {"Product Vendor": "norda", "sales": 895.0, "units": 4}], "markdown_share": 0.092, "release_share": 0.7464}]};
-const $ = id => document.getElementById(id);
-const fmt$ = n => n==null?'–':(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString();
-const fmtN = n => n==null?'–':Math.round(n).toLocaleString();
-const pct = n => n==null?'–':(n*100).toFixed(2)+'%';
-const dow = d => new Date(d+'T12:00:00').toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
-const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const DATA = {"banner": "Livestock", "tz": "America/Vancouver", "week_start": "Sunday", "weeks": [{"start": "2026-10-18", "end": "2026-10-24", "channels": [{"channel": "google", "traffic": "organic", "sales": 23145.89, "sessions": 6883, "orders": 113, "new_cust": 35, "ret_cust": 78}, {"channel": "klaviyo", "traffic": "paid", "sales": 11524.06, "sessions": 4771, "orders": 41, "new_cust": 4, "ret_cust": 37}, {"channel": "google_ads", "traffic": "paid", "sales": 10342.47, "sessions": 4015, "orders": 46, "new_cust": 26, "ret_cust": 20}, {"channel": "meta_ads", "traffic": "paid", "sales": 2654.07, "sessions": 6529, "orders": 15, "new_cust": 9, "ret_cust": 6}, {"channel": "linktr", "traffic": "organic", "sales": 2576.6, "sessions": 1087, "orders": 11, "new_cust": 3, "ret_cust": 8}, {"channel": "instagram", "traffic": "organic", "sales": 2156.03, "sessions": 1039, "orders": 7, "new_cust": 2, "ret_cust": 5}, {"channel": "store_3555", "traffic": "unknown", "sales": 1070.55, "sessions": 15, "orders": 3, "new_cust": 2, "ret_cust": 1}, {"channel": "unknown", "traffic": "unknown", "sales": 858.93, "sessions": 111, "orders": 3, "new_cust": 2, "ret_cust": 1}, {"channel": "bing", "traffic": "organic", "sales": 634.5, "sessions": 128, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"channel": "spently", "traffic": "paid", "sales": 546.46, "sessions": 20, "orders": 4, "new_cust": 1, "ret_cust": 3}, {"channel": "sneakersynclabs", "traffic": "organic", "sales": 535.5, "sessions": 3, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "valuecom", "traffic": "organic", "sales": 521.15, "sessions": 2, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"channel": "chatgpt", "traffic": "organic", "sales": 475.57, "sessions": 216, "orders": 3, "new_cust": 3, "ret_cust": 0}, {"channel": "couponbirds", "traffic": "organic", "sales": 336.35, "sessions": 2, "orders": 2, "new_cust": 2, "ret_cust": 0}, {"channel": "shopify", "traffic": "organic", "sales": 322.05, "sessions": 30, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"channel": "facebook", "traffic": "organic", "sales": 319.2, "sessions": 361, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "shopify_email", "traffic": "unknown", "sales": 295.0, "sessions": 151, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "afterpay", "traffic": "organic", "sales": 248.6, "sessions": 5, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "zephr", "traffic": "organic", "sales": 203.4, "sessions": 8, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "afterpay", "traffic": "unknown", "sales": 192.1, "sessions": 81, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"channel": "duckduckgo", "traffic": "organic", "sales": 179.2, "sessions": 61, "orders": 1, "new_cust": 0, "ret_cust": 1}], "channel_tail": {"channel": "72 other sources (no sales)", "traffic": "mixed", "sales": 0.0, "sessions": 814, "orders": 0, "new_cust": 0, "ret_cust": 0}, "adjustments": [{"channel": "goodsearch", "sales": -132.25}, {"channel": "unattributed", "sales": -312.7}], "campaigns": [{"campaign": "organic", "channel": "google", "traffic": "organic", "sales": 23145.89, "sessions": 6883, "orders": 113, "new_cust": 35, "ret_cust": 78}, {"campaign": "branded_search", "channel": "google_ads", "traffic": "paid", "sales": 7801.28, "sessions": 1275, "orders": 29, "new_cust": 13, "ret_cust": 16}, {"campaign": "2026_10_16_adidas_SFTM_Release", "channel": "klaviyo", "traffic": "paid", "sales": 4361.2, "sessions": 1245, "orders": 16, "new_cust": 2, "ret_cust": 14}, {"campaign": "organic", "channel": "linktr", "traffic": "organic", "sales": 2576.6, "sessions": 1087, "orders": 11, "new_cust": 3, "ret_cust": 8}, {"campaign": "organic", "channel": "instagram", "traffic": "organic", "sales": 2156.03, "sessions": 1039, "orders": 7, "new_cust": 2, "ret_cust": 5}, {"campaign": "2026_10_22_Jellyfish_release", "channel": "klaviyo", "traffic": "paid", "sales": 1719.65, "sessions": 425, "orders": 4, "new_cust": 0, "ret_cust": 4}, {"campaign": "tof_bof_combined_conversions", "channel": "meta_ads", "traffic": "paid", "sales": 1433.97, "sessions": 4051, "orders": 9, "new_cust": 5, "ret_cust": 4}, {"campaign": "shop_inline", "channel": "google_ads", "traffic": "paid", "sales": 1418.31, "sessions": 1334, "orders": 9, "new_cust": 7, "ret_cust": 2}, {"campaign": "2026_10_22_Clarks_New_Balance", "channel": "klaviyo", "traffic": "paid", "sales": 1344.48, "sessions": 598, "orders": 5, "new_cust": 0, "ret_cust": 5}, {"campaign": "sales_adv_", "channel": "meta_ads", "traffic": "paid", "sales": 1220.1, "sessions": 2475, "orders": 6, "new_cust": 4, "ret_cust": 2}, {"campaign": "2026_10_14_New_Arrivals", "channel": "klaviyo", "traffic": "paid", "sales": 1144.39, "sessions": 68, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"campaign": "2026_10_20_New_Arrivals", "channel": "klaviyo", "traffic": "paid", "sales": 1137.95, "sessions": 899, "orders": 4, "new_cust": 0, "ret_cust": 4}, {"campaign": "shop-inline_ca_us", "channel": "google_ads", "traffic": "paid", "sales": 797.13, "sessions": 1255, "orders": 6, "new_cust": 6, "ret_cust": 0}, {"campaign": "organic", "channel": "bing", "traffic": "organic", "sales": 634.5, "sessions": 128, "orders": 3, "new_cust": 0, "ret_cust": 3}, {"campaign": "Spently Draft Order Email", "channel": "spently", "traffic": "paid", "sales": 546.46, "sessions": 5, "orders": 4, "new_cust": 1, "ret_cust": 3}, {"campaign": "organic", "channel": "sneakersynclabs", "traffic": "organic", "sales": 535.5, "sessions": 3, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "organic", "channel": "valuecom", "traffic": "organic", "sales": 521.15, "sessions": 2, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "chatgpt", "traffic": "organic", "sales": 475.57, "sessions": 201, "orders": 3, "new_cust": 3, "ret_cust": 0}, {"campaign": "2026_10_10_Hellstar_adidas", "channel": "klaviyo", "traffic": "paid", "sales": 468.95, "sessions": 10, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "2026_10_11_Salomon_Casio", "channel": "klaviyo", "traffic": "paid", "sales": 440.7, "sessions": 99, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "organic", "channel": "couponbirds", "traffic": "organic", "sales": 336.35, "sessions": 2, "orders": 2, "new_cust": 2, "ret_cust": 0}, {"campaign": "CART ABANDONMENT_1", "channel": "klaviyo", "traffic": "paid", "sales": 322.22, "sessions": 3, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "shopify", "traffic": "organic", "sales": 322.05, "sessions": 30, "orders": 2, "new_cust": 0, "ret_cust": 2}, {"campaign": "organic", "channel": "facebook", "traffic": "organic", "sales": 319.2, "sessions": 360, "orders": 1, "new_cust": 0, "ret_cust": 1}, {"campaign": "2026_09_26_Kobe_&_badbo", "channel": "klaviyo", "traffic": "paid", "sales": 265.55, "sessions": 9, "orders": 1, "new_cust": 1, "ret_cust": 0}], "campaign_adjustments": [{"campaign": "2026_09_24_Gramicci_Editorial", "channel": "klaviyo", "sales": -97.73}, {"campaign": "2026_09_08_New_Arrivals", "channel": "klaviyo", "sales": -100.0}, {"campaign": "organic", "channel": "goodsearch", "sales": -132.25}], "attributed_total": 59137.68, "attributed_net_of_adj": 58692.73, "paid_spend_filled": false, "product_daily": [{"day": "2026-10-18", "sales": 5120.0, "units": 37, "release_sales": 1485.0, "md_sales": 1215.0}, {"day": "2026-10-19", "sales": 4034.5, "units": 22, "release_sales": 1810.0, "md_sales": 704.5}, {"day": "2026-10-20", "sales": 5596.84, "units": 39, "release_sales": 1765.0, "md_sales": 1312.4}, {"day": "2026-10-21", "sales": 10991.0, "units": 55, "release_sales": 9110.0, "md_sales": 1455.0}, {"day": "2026-10-22", "sales": 8426.2, "units": 46, "release_sales": 5080.0, "md_sales": 1081.5}, {"day": "2026-10-23", "sales": 6017.75, "units": 38, "release_sales": 1676.75, "md_sales": 750.0}, {"day": "2026-10-24", "sales": 59165.0, "units": 207, "release_sales": 55865.0, "md_sales": 1625.0}, {"day": "2026-10-25", "sales": 10236.8, "units": 58, "release_sales": 5010.0, "md_sales": 1940.0}], "product_total_in_window": 99351.29, "product_total_all": 109588.09, "product_units_in_window": 444, "product_rows": 1106, "product_exact_dupe_rows": 566, "top_products": [{"SKU": "00050462", "Product Title": "adidas PW Adistar Jellyfish Red / Black - Team Victory Red", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 30420.0, "units": 78, "md_sales": 0.0, "price": 390.0}, {"SKU": "00052127", "Product Title": "Jordan 1 High OG Black / Game Royal - White", "Product Vendor": "Jordan", "Department": "Mens Footwear", "CLASS": "Basketball", "Release": "Release", "sales": 21150.0, "units": 90, "md_sales": 0.0, "price": 235.0}, {"SKU": "00056204", "Product Title": "Jordan x J Balvin 4 Retro Lemonade / Lemonade", "Product Vendor": "Jordan", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 11970.0, "units": 42, "md_sales": 0.0, "price": 285.0}, {"SKU": "00050463", "Product Title": "adidas PW Adistar Jellyfish Onyx / Aurora Onyx - Black", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 7020.0, "units": 18, "md_sales": 0.0, "price": 390.0}, {"SKU": "00052234", "Product Title": "Nike Vomero Premium SP Skeleton Black / Black - Iron Grey", "Product Vendor": "Nike", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Release", "sales": 3291.75, "units": 12, "md_sales": 0.0, "price": 285.0}, {"SKU": "00051616", "Product Title": "adidas x Song for the Mute SL72 Pro Collegiate Green", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 3050.0, "units": 18, "md_sales": 0.0, "price": 170.0}, {"SKU": "00051617", "Product Title": "adidas x Song for the Mute SL72 Pro / Off White", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 1360.0, "units": 8, "md_sales": 0.0, "price": 170.0}, {"SKU": "00050041", "Product Title": "Salomon XT-6 White / Excalibur - Paloma", "Product Vendor": "Salomon", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 1150.0, "units": 5, "md_sales": 0.0, "price": 230.0}, {"SKU": "00050567", "Product Title": "New Balance Made in USA 992 Core Black / White", "Product Vendor": "New Balance", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 1100.0, "units": 4, "md_sales": 0.0, "price": 275.0}, {"SKU": "00049971", "Product Title": "Salomon XT-6 Pearl Blue / Grisaille", "Product Vendor": "Salomon", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 690.0, "units": 3, "md_sales": 0.0, "price": 230.0}, {"SKU": "00050044", "Product Title": "Salomon XT-6 GTX Vanilla Ice / Bog - Shadow Green", "Product Vendor": "Salomon", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 690.0, "units": 3, "md_sales": 0.0, "price": 230.0}, {"SKU": "00051743", "Product Title": "Casio AQ230EGL-9A Gold / Brown", "Product Vendor": "Casio", "Department": "Other Accessories", "CLASS": "Jewellery - DNU", "Release": "Regular", "sales": 690.0, "units": 6, "md_sales": 0.0, "price": 115.0}, {"SKU": "00053691", "Product Title": "Nike Air Max Goadome Low SP Black / Black - Black", "Product Vendor": "Nike", "Department": "Mens Footwear", "CLASS": "Outdoor/Boots", "Release": "Regular", "sales": 645.0, "units": 3, "md_sales": 0.0, "price": 215.0}, {"SKU": "00050552", "Product Title": "ASICS NOVABLAST 6 Black / Black", "Product Vendor": "ASICS", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 600.0, "units": 4, "md_sales": 600.0, "price": 150.0}, {"SKU": "00050497", "Product Title": "norda 001A / Black", "Product Vendor": "norda", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 600.0, "units": 3, "md_sales": 600.0, "price": 200.0}, {"SKU": "00050487", "Product Title": "Clarks Wallabee / Dark Brown Leather", "Product Vendor": "Clarks Originals", "Department": "Mens Footwear", "CLASS": "Casual Shoe", "Release": "Regular", "sales": 570.0, "units": 3, "md_sales": 0.0, "price": 190.0}, {"SKU": "00051541", "Product Title": "adidas Hellstar Ember Tracksuit Pants / Black", "Product Vendor": "adidas", "Department": "Mens Apparel", "CLASS": "Bottoms", "Release": "Release", "sales": 510.0, "units": 3, "md_sales": 0.0, "price": 170.0}, {"SKU": "00025436", "Product Title": "Salomon XT-6 GTX Black / Black - Ftw Silver", "Product Vendor": "Salomon", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 500.0, "units": 2, "md_sales": 0.0, "price": 250.0}, {"SKU": "00050021", "Product Title": "Salomon XT-6 GTX Sea Foam / Green Milieu - Black", "Product Vendor": "Salomon", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 500.0, "units": 2, "md_sales": 0.0, "price": 250.0}, {"SKU": "00052143", "Product Title": "Nike Kobe X Blue Lagoon / Black", "Product Vendor": "Nike", "Department": "Mens Footwear", "CLASS": "Basketball", "Release": "Release", "sales": 490.0, "units": 2, "md_sales": 0.0, "price": 245.0}, {"SKU": "00050558", "Product Title": "ASICS NOVABLAST 6 GTX Black / Graphite Grey", "Product Vendor": "ASICS", "Department": "Mens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 440.0, "units": 2, "md_sales": 0.0, "price": 220.0}, {"SKU": "00050551", "Product Title": "ASICS US8-S GEL-SJ33 Roasted Coffee / Periwinkle", "Product Vendor": "ASICS", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 380.0, "units": 2, "md_sales": 380.0, "price": 190.0}, {"SKU": "00052342", "Product Title": "Purple Mountain Observatory Forager Jacket / Chocolate", "Product Vendor": "Purple Mountain Observatory", "Department": "Mens Apparel", "CLASS": "Jacket - DNU", "Release": "Regular", "sales": 363.0, "units": 1, "md_sales": 0.0, "price": 660.0}, {"SKU": "00050638", "Product Title": "Arc'teryx Gamma Jacket / Black", "Product Vendor": "Arc'teryx", "Department": "Mens Apparel", "CLASS": "Jacket - DNU", "Release": "Regular", "sales": 360.0, "units": 1, "md_sales": 0.0, "price": 360.0}, {"SKU": "00051380", "Product Title": "adidas Bad Bunny Gazelle Solar Gold / Black - Gum", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 360.0, "units": 2, "md_sales": 0.0, "price": 180.0}, {"SKU": "00051099", "Product Title": "Carhartt WIP Detroit Jacket Dark Navy / Black", "Product Vendor": "Carhartt WIP", "Department": "Mens Apparel", "CLASS": "Jacket - DNU", "Release": "Regular", "sales": 355.0, "units": 1, "md_sales": 0.0, "price": 365.0}, {"SKU": "00050431", "Product Title": "adidas BW Army Decon Dove Grey / White", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Casual Shoe", "Release": "Regular", "sales": 348.0, "units": 3, "md_sales": 348.0, "price": 128.0}, {"SKU": "00048600", "Product Title": "adidas BW Army Black / Black - Gum10", "Product Vendor": "adidas", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 320.0, "units": 2, "md_sales": 0.0, "price": 160.0}, {"SKU": "00055867", "Product Title": "4YE Signature Zip Hoodie Black / White", "Product Vendor": "4YE", "Department": "Mens Apparel", "CLASS": "Mid Layer", "Release": "Regular", "sales": 320.0, "units": 2, "md_sales": 0.0, "price": 160.0}, {"SKU": "00055868", "Product Title": "4YE Signature Zip Hoodie Black / Red", "Product Vendor": "4YE", "Department": "Mens Apparel", "CLASS": "Mid Layer", "Release": "Regular", "sales": 320.0, "units": 2, "md_sales": 0.0, "price": 160.0}, {"SKU": "00051115", "Product Title": "Carhartt WIP Osborn Cargo Pant Camo Feather Tree / Black", "Product Vendor": "Carhartt WIP", "Department": "Mens Apparel", "CLASS": "Bottoms", "Release": "Regular", "sales": 315.0, "units": 1, "md_sales": 0.0, "price": 315.0}, {"SKU": "00045923", "Product Title": "New Balance 1906L Rosewood / Rosewood", "Product Vendor": "New Balance", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 300.0, "units": 3, "md_sales": 300.0, "price": 100.0}, {"SKU": "00050496", "Product Title": "norda Women's 001A / Pewter", "Product Vendor": "norda", "Department": "Womens Footwear", "CLASS": "Running", "Release": "Regular", "sales": 295.0, "units": 1, "md_sales": 0.0, "price": 295.0}, {"SKU": "00053310", "Product Title": "Oakley Neo Jacket Satin Chrome / Prizm Sapphire", "Product Vendor": "Oakley", "Department": "Other Accessories", "CLASS": "Eyewear - DNU", "Release": "Regular", "sales": 286.0, "units": 1, "md_sales": 0.0, "price": 286.0}, {"SKU": "00049343", "Product Title": "Metalwood Metal Logo 5-Panel Hat / Real Leaf Camo", "Product Vendor": "Metalwood", "Department": "Clothing Accessories", "CLASS": "Hat", "Release": "Regular", "sales": 280.0, "units": 8, "md_sales": 280.0, "price": 35.0}, {"SKU": "00045898", "Product Title": "ASICS UB13-S GEL-SD LYTE Black Coffee / Midnight", "Product Vendor": "ASICS", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 280.0, "units": 2, "md_sales": 280.0, "price": 150.0}, {"SKU": "00044921", "Product Title": "Arc'teryx Konseal GTX Shoe Black / Black", "Product Vendor": "Arc'teryx", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 280.0, "units": 1, "md_sales": 0.0, "price": 280.0}, {"SKU": "00050559", "Product Title": "ASICS GEL-1130 Dusty Fern / Black", "Product Vendor": "ASICS", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 280.0, "units": 2, "md_sales": 0.0, "price": 140.0}, {"SKU": "00055719", "Product Title": "Nike x Tom Sachs Women's General Purpose Black / White - Team Royal", "Product Vendor": "Nike", "Department": "Womens Footwear", "CLASS": "Athletic Casual", "Release": "Release", "sales": 280.0, "units": 2, "md_sales": 0.0, "price": 140.0}, {"SKU": "00017107", "Product Title": "New Balance Made in USA 993 / Grey", "Product Vendor": "New Balance", "Department": "Mens Footwear", "CLASS": "Athletic Casual", "Release": "Regular", "sales": 275.0, "units": 1, "md_sales": 0.0, "price": 275.0}], "top_product_daily": [{"SKU": "00017107", "day": "2026-10-20", "sales": 275.0, "units": 1}, {"SKU": "00017107", "day": "2026-10-22", "sales": -275.0, "units": -1}, {"SKU": "00017107", "day": "2026-10-23", "sales": 275.0, "units": 1}, {"SKU": "00025436", "day": "2026-10-18", "sales": 250.0, "units": 1}, {"SKU": "00025436", "day": "2026-10-20", "sales": -250.0, "units": -1}, {"SKU": "00025436", "day": "2026-10-25", "sales": 500.0, "units": 2}, {"SKU": "00044921", "day": "2026-10-23", "sales": 280.0, "units": 1}, {"SKU": "00045898", "day": "2026-10-18", "sales": 150.0, "units": 1}, {"SKU": "00045898", "day": "2026-10-22", "sales": 130.0, "units": 1}, {"SKU": "00045923", "day": "2026-10-19", "sales": 0.0, "units": 0}, {"SKU": "00045923", "day": "2026-10-20", "sales": 100.0, "units": 1}, {"SKU": "00045923", "day": "2026-10-21", "sales": 100.0, "units": 1}, {"SKU": "00045923", "day": "2026-10-22", "sales": 100.0, "units": 1}, {"SKU": "00048600", "day": "2026-10-18", "sales": 160.0, "units": 1}, {"SKU": "00048600", "day": "2026-10-25", "sales": 160.0, "units": 1}, {"SKU": "00049343", "day": "2026-10-18", "sales": 35.0, "units": 1}, {"SKU": "00049343", "day": "2026-10-20", "sales": 35.0, "units": 1}, {"SKU": "00049343", "day": "2026-10-22", "sales": 175.0, "units": 5}, {"SKU": "00049343", "day": "2026-10-23", "sales": 35.0, "units": 1}, {"SKU": "00049971", "day": "2026-10-20", "sales": 230.0, "units": 1}, {"SKU": "00049971", "day": "2026-10-21", "sales": 230.0, "units": 1}, {"SKU": "00049971", "day": "2026-10-23", "sales": 230.0, "units": 1}, {"SKU": "00050021", "day": "2026-10-23", "sales": 250.0, "units": 1}, {"SKU": "00050021", "day": "2026-10-25", "sales": 250.0, "units": 1}, {"SKU": "00050041", "day": "2026-10-22", "sales": 460.0, "units": 2}, {"SKU": "00050041", "day": "2026-10-25", "sales": 690.0, "units": 3}, {"SKU": "00050044", "day": "2026-10-24", "sales": 230.0, "units": 1}, {"SKU": "00050044", "day": "2026-10-25", "sales": 460.0, "units": 2}, {"SKU": "00050431", "day": "2026-10-20", "sales": 128.0, "units": 1}, {"SKU": "00050431", "day": "2026-10-23", "sales": 110.0, "units": 1}, {"SKU": "00050431", "day": "2026-10-24", "sales": 110.0, "units": 1}, {"SKU": "00050462", "day": "2026-10-24", "sales": 30420.0, "units": 78}, {"SKU": "00050463", "day": "2026-10-24", "sales": 5850.0, "units": 15}, {"SKU": "00050463", "day": "2026-10-25", "sales": 1170.0, "units": 3}, {"SKU": "00050487", "day": "2026-10-23", "sales": 570.0, "units": 3}, {"SKU": "00050496", "day": "2026-10-18", "sales": 295.0, "units": 1}, {"SKU": "00050497", "day": "2026-10-18", "sales": 200.0, "units": 1}, {"SKU": "00050497", "day": "2026-10-19", "sales": 200.0, "units": 1}, {"SKU": "00050497", "day": "2026-10-21", "sales": 200.0, "units": 1}, {"SKU": "00050551", "day": "2026-10-22", "sales": 190.0, "units": 1}, {"SKU": "00050551", "day": "2026-10-24", "sales": 190.0, "units": 1}, {"SKU": "00050552", "day": "2026-10-23", "sales": 300.0, "units": 2}, {"SKU": "00050552", "day": "2026-10-24", "sales": 150.0, "units": 1}, {"SKU": "00050552", "day": "2026-10-25", "sales": 150.0, "units": 1}, {"SKU": "00050558", "day": "2026-10-20", "sales": 220.0, "units": 1}, {"SKU": "00050558", "day": "2026-10-24", "sales": 220.0, "units": 1}, {"SKU": "00050559", "day": "2026-10-21", "sales": 140.0, "units": 1}, {"SKU": "00050559", "day": "2026-10-22", "sales": 140.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-18", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-23", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-24", "sales": 275.0, "units": 1}, {"SKU": "00050567", "day": "2026-10-25", "sales": 275.0, "units": 1}, {"SKU": "00050638", "day": "2026-10-19", "sales": 360.0, "units": 1}, {"SKU": "00051099", "day": "2026-10-25", "sales": 355.0, "units": 1}, {"SKU": "00051115", "day": "2026-10-20", "sales": 315.0, "units": 1}, {"SKU": "00051380", "day": "2026-10-18", "sales": 360.0, "units": 2}, {"SKU": "00051380", "day": "2026-10-20", "sales": 180.0, "units": 1}, {"SKU": "00051541", "day": "2026-10-22", "sales": 340.0, "units": 2}, {"SKU": "00051541", "day": "2026-10-23", "sales": 170.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-18", "sales": 340.0, "units": 2}, {"SKU": "00051616", "day": "2026-10-19", "sales": 850.0, "units": 5}, {"SKU": "00051616", "day": "2026-10-20", "sales": 1020.0, "units": 6}, {"SKU": "00051616", "day": "2026-10-21", "sales": 170.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-22", "sales": 160.0, "units": 1}, {"SKU": "00051616", "day": "2026-10-23", "sales": 340.0, "units": 2}, {"SKU": "00051616", "day": "2026-10-24", "sales": 170.0, "units": 1}, {"SKU": "00051617", "day": "2026-10-18", "sales": 170.0, "units": 1}, {"SKU": "00051617", "day": "2026-10-19", "sales": 850.0, "units": 5}, {"SKU": "00051617", "day": "2026-10-22", "sales": 0.0, "units": 0}, {"SKU": "00051617", "day": "2026-10-24", "sales": 340.0, "units": 2}, {"SKU": "00051743", "day": "2026-10-18", "sales": -115.0, "units": -1}, {"SKU": "00051743", "day": "2026-10-19", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-20", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-22", "sales": 230.0, "units": 2}, {"SKU": "00051743", "day": "2026-10-23", "sales": 115.0, "units": 1}, {"SKU": "00051743", "day": "2026-10-24", "sales": 230.0, "units": 2}, {"SKU": "00052127", "day": "2026-10-24", "sales": 18330.0, "units": 78}, {"SKU": "00052127", "day": "2026-10-25", "sales": 2820.0, "units": 12}, {"SKU": "00052143", "day": "2026-10-18", "sales": 245.0, "units": 1}, {"SKU": "00052143", "day": "2026-10-19", "sales": 245.0, "units": 1}, {"SKU": "00052234", "day": "2026-10-22", "sales": 2280.0, "units": 8}, {"SKU": "00052234", "day": "2026-10-23", "sales": 726.75, "units": 3}, {"SKU": "00052234", "day": "2026-10-25", "sales": 285.0, "units": 1}, {"SKU": "00052342", "day": "2026-10-20", "sales": 363.0, "units": 1}, {"SKU": "00053310", "day": "2026-10-22", "sales": 286.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-20", "sales": 215.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-22", "sales": 215.0, "units": 1}, {"SKU": "00053691", "day": "2026-10-23", "sales": 215.0, "units": 1}, {"SKU": "00055719", "day": "2026-10-18", "sales": 280.0, "units": 2}, {"SKU": "00055719", "day": "2026-10-19", "sales": -140.0, "units": -1}, {"SKU": "00055719", "day": "2026-10-20", "sales": 140.0, "units": 1}, {"SKU": "00055719", "day": "2026-10-22", "sales": 0.0, "units": 0}, {"SKU": "00055867", "day": "2026-10-19", "sales": 160.0, "units": 1}, {"SKU": "00055867", "day": "2026-10-23", "sales": 160.0, "units": 1}, {"SKU": "00055868", "day": "2026-10-20", "sales": 320.0, "units": 2}, {"SKU": "00056204", "day": "2026-10-21", "sales": 8550.0, "units": 30}, {"SKU": "00056204", "day": "2026-10-22", "sales": 1995.0, "units": 7}, {"SKU": "00056204", "day": "2026-10-23", "sales": 285.0, "units": 1}, {"SKU": "00056204", "day": "2026-10-24", "sales": 855.0, "units": 3}, {"SKU": "00056204", "day": "2026-10-25", "sales": 285.0, "units": 1}], "vendors": [{"Product Vendor": "adidas", "sales": 45893.0, "units": 152}, {"Product Vendor": "Jordan", "sales": 33390.0, "units": 133}, {"Product Vendor": "Nike", "sales": 6811.25, "units": 37}, {"Product Vendor": "Salomon", "sales": 4260.0, "units": 19}, {"Product Vendor": "ASICS", "sales": 3205.0, "units": 23}, {"Product Vendor": "New Balance", "sales": 2355.0, "units": 12}, {"Product Vendor": "Carhartt WIP", "sales": 1714.0, "units": 11}, {"Product Vendor": "Casio", "sales": 1520.0, "units": 14}, {"Product Vendor": "Arc'teryx", "sales": 1205.0, "units": 11}, {"Product Vendor": "norda", "sales": 895.0, "units": 4}], "markdown_share": 0.092, "release_share": 0.7464}]};
+const $=id=>document.getElementById(id);
+const f$=n=>n==null?'–':(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString();
+const fN=n=>n==null?'–':Math.round(n).toLocaleString();
+const fP=n=>n==null||!isFinite(n)?'–':(n*100).toFixed(2)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dow=d=>new Date(d+'T12:00:00').toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+const W=DATA.weeks;
+let cur=W.length-1, grain='day';
 
-DATA.weeks.forEach((w,i)=>$('wk').add(new Option(`${w.start} → ${w.end}`,i)));
-$('wk').value = DATA.weeks.length-1;
-$('wk').onchange = render;
+/* ---------- derived per-week totals ---------- */
+function isSend(n){return /^\d{4}_\d{2}_\d{2}_/.test(n)}
+function sendDate(n){const m=n.match(/^(\d{4})_(\d{2})_(\d{2})_/);return m?`${m[1]}-${m[2]}-${m[3]}`:null}
+function tot(w){
+  if(!w)return null;
+  const s=k=>w.channels.reduce((a,c)=>a+c[k],0), orders=s('orders'), sales=w.attributed_net_of_adj;
+  const sessions=s('sessions')+w.channel_tail.sessions;
+  const paid=w.channels.filter(c=>c.traffic==='paid').reduce((a,c)=>a+c.sales,0);
+  const kl=w.channels.filter(c=>c.channel==='klaviyo').reduce((a,c)=>a+c.sales,0);
+  return {sales,orders,sessions,aov:orders?sales/orders:0,cvr:sessions?orders/sessions:0,newc:s('new_cust'),retc:s('ret_cust'),
+          prod:w.product_total_in_window,units:w.product_units_in_window,paid,kl,
+          rel:w.release_share,md:w.markdown_share,gap:w.product_total_in_window-sales}
+}
+/* delta chips */
+function chip(label,c,p,kind){
+  if(p==null)return `<span class="dch"><em>${label}</em><b class="flat">n/a</b></span>`;
+  if(kind==='rate'){const d=(c-p)*100;return `<span class="dch"><em>${label}</em><b class="${d>=0?'up':'dn'}">${d>=0?'+':''}${d.toFixed(2)} pp</b></span>`}
+  if(!p)return `<span class="dch"><em>${label}</em><b class="flat">new</b></span>`;
+  const d=(c-p)/p;return `<span class="dch"><em>${label}</em><b class="${d>=0?'up':'dn'}">${d>=0?'+':''}${(d*100).toFixed(1)}%</b></span>`;
+}
+function kpi(label,val,c,p,kind,hero,note){
+  return `<div class="kpi ${hero?'hero':'mini'}"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div>
+  <div class="kpi-sub">${chip('PW',c,p,kind)}${chip('PY',0,null)}</div>${note?`<div class="kpi-note">${note}</div>`:''}</div>`;
+}
 
-function delta(cur, prev, rate){
-  if(prev==null) return '<span class="d">no prior week loaded</span>';
-  if(rate){const d=(cur-prev)*100;return `<span class="d" style="color:var(--${d>=0?'good':'bad'})">${d>=0?'+':''}${d.toFixed(2)} pp</span>`}
-  if(!prev) return '<span class="d">new</span>';
-  const d=(cur-prev)/prev;return `<span class="d" style="color:var(--${d>=0?'good':'bad'})">${d>=0?'+':''}${(d*100).toFixed(1)}%</span>`;
-}
-function totals(w){
-  if(!w) return null;
-  const s=k=>w.channels.reduce((a,c)=>a+c[k],0);
-  const orders=s('orders'), sales=w.attributed_net_of_adj;
-  return {sales, orders, sessions:s('sessions')+w.channel_tail.sessions, aov:orders?sales/orders:0,
-          prod:w.product_total_in_window, units:w.product_units_in_window};
-}
-function table(el, cols, rows, sortKey){
-  let state={k:sortKey,dir:-1};
+/* ---------- generic sortable table ---------- */
+function table(el,cols,rows,sortKey,opt={}){
+  let st={k:sortKey,d:-1}, open=null;
   const draw=()=>{
-    rows.sort((a,b)=>(a[state.k]>b[state.k]?1:-1)*state.dir);
-    el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.h}${state.k===c.k?(state.dir<0?' ▾':' ▴'):''}</th>`).join('')+
-      '</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${c.cls||''}">${c.f?c.f(r[c.k],r):r[c.k]}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
-    el.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;state.dir=state.k===k?-state.dir:-1;state.k=k;draw()});
+    rows.sort((a,b)=>(a[st.k]>b[st.k]?1:a[st.k]<b[st.k]?-1:0)*st.d);
+    let h='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}" class="${st.k===c.k?'sorted':''}">${c.h}${st.k===c.k?(st.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      h+=`<tr class="${opt.detail?'drill':''}" data-i="${i}">`+cols.map(c=>`<td class="${c.nm?'nm':''}">${c.f?c.f(r[c.k],r):esc(r[c.k])}</td>`).join('')+'</tr>';
+      if(open===i&&opt.detail)h+=`<tr class="det"><td colspan="${cols.length}"><div class="det-in">${opt.detail(r)}</div></td></tr>`;
+    });
+    if(opt.total)h+=`<tr class="tot">`+cols.map(c=>`<td>${opt.total[c.k]??''}</td>`).join('')+'</tr>';
+    el.innerHTML=h+'</tbody></table>';
+    el.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;st.d=st.k===k?-st.d:-1;st.k=k;open=null;draw()});
+    if(opt.detail)el.querySelectorAll('tr.drill').forEach(tr=>tr.onclick=()=>{const i=+tr.dataset.i;open=open===i?null:i;draw()});
   };draw();
 }
+const dk=(k,v)=>`<div><div class="det-k">${k}</div><div class="det-v">${v}</div></div>`;
+const bar=v=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v*100))}%"></i></div>`;
 
+/* ---------- trend chart ---------- */
+function weekStartOf(d){const dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()-dt.getDay());return dt.toISOString().slice(0,10)}
+function trend(el,lg,w){
+  let pts;
+  if(grain==='day')pts=w.product_daily.map(d=>({l:dow(d.day),s:d.sales,r:d.release_sales,flag:d.day>w.end?'outside channel range':''}));
+  else{const m={};W.forEach(x=>x.product_daily.forEach(d=>{const k=weekStartOf(d.day);(m[k]??={s:0,r:0});m[k].s+=d.sales;m[k].r+=d.release_sales}));
+       pts=Object.keys(m).sort().map(k=>({l:'Wk of '+dow(k),s:m[k].s,r:m[k].r,flag:''}))}
+  const max=Math.max(...pts.map(p=>p.s)),Wd=Math.max(640,pts.length*90),H=220,bw=Math.min(56,(Wd-60)/pts.length-14);
+  let svg=`<svg viewBox="0 0 ${Wd} ${H+34}" width="100%" role="img" aria-label="Net sales trend">`;
+  for(let g=0;g<=3;g++){const y=H-g/3*(H-20);svg+=`<line x1="46" x2="${Wd}" y1="${y}" y2="${y}" stroke="#222"/><text x="40" y="${y+4}" text-anchor="end">${f$(max*g/3)}</text>`}
+  pts.forEach((p,j)=>{const x=50+j*((Wd-60)/pts.length)+7,h=v=>v/max*(H-20),reg=p.s-p.r;
+    svg+=`<rect x="${x}" y="${H-h(reg)}" width="${bw}" height="${h(reg)}" fill="#3987e5"><title>${p.l} regular ${f$(reg)}</title></rect>`+
+         `<rect x="${x}" y="${H-h(p.s)}" width="${bw}" height="${h(p.r)}" fill="#d95926"><title>${p.l} release ${f$(p.r)}</title></rect>`+
+         `<text x="${x+bw/2}" y="${H-h(p.s)-5}" text-anchor="middle">${f$(p.s)}</text><text x="${x+bw/2}" y="${H+15}" text-anchor="middle">${p.l}</text>`+
+         (p.flag?`<text x="${x+bw/2}" y="${H+28}" text-anchor="middle">${p.flag}</text>`:'')});
+  el.innerHTML=svg+'</svg>';
+  lg.innerHTML='<span><i style="background:#3987e5"></i>Regular</span><span><i style="background:#d95926"></i>Release SKUs</span>';
+}
+
+/* ---------- render ---------- */
 function render(){
-  const i=+$('wk').value, w=DATA.weeks[i], prev=DATA.weeks[i-1], T=totals(w), P=totals(prev);
-  $('meta').textContent=`${DATA.banner} · weeks start ${DATA.week_start} · ${DATA.tz} · ${w.start} to ${w.end}`;
-  const k=[['Attributed sales',fmt$(T.sales),delta(T.sales,P&&P.sales)],
-           ['Attributed orders',fmtN(T.orders),delta(T.orders,P&&P.orders)],
-           ['Sessions',fmtN(T.sessions),delta(T.sessions,P&&P.sessions)],
-           ['Attributed AOV',fmt$(T.aov),delta(T.aov,P&&P.aov)],
-           [`Product net sales (to ${w.end.slice(5)})`,fmt$(T.prod),delta(T.prod,P&&P.prod)],
-           ['Units',fmtN(T.units),delta(T.units,P&&P.units)],
-           ['Ad spend / ROAS',w.paid_spend_filled?'see table':'n/a','<span class="d">spend export empty</span>']];
-  $('kpis').innerHTML=k.map(([l,v,d])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>${d}</div>`).join('');
+  const w=W[cur],pw=W[cur-1],T=tot(w),P=tot(pw);
+  $('hdrMeta').textContent=`Livestock · weeks start ${DATA.week_start} · ${DATA.tz} · ${w.start} to ${w.end} · ${W.length} week${W.length>1?'s':''} loaded`;
+  $('cmpLabel').innerHTML=pw?`Previous week <b>${pw.start} → ${pw.end}</b>`:'<b>No prior week loaded</b> · PY not loaded';
+  $('prevP').disabled=cur===0;$('nextP').disabled=cur===W.length-1;
+  const g=(a,k)=>a?a[k]:null;
 
-  // timeline
-  const D=w.product_daily, max=Math.max(...D.map(d=>d.sales)), W=Math.max(640,D.length*90), H=220, bw=Math.min(54,(W-60)/D.length-14);
-  let svg=`<svg viewBox="0 0 ${W} ${H+30}" width="100%" role="img" aria-label="Daily product net sales">`;
-  D.forEach((d,j)=>{
-    const x=50+j*((W-60)/D.length)+7, h=v=>v/max*(H-20);
-    const reg=d.sales-d.release_sales, rel=d.release_sales;
-    svg+=`<rect x="${x}" y="${H-h(reg)}" width="${bw}" height="${h(reg)}" fill="var(--a)"><title>${d.day} regular ${fmt$(reg)}</title></rect>`;
-    svg+=`<rect x="${x}" y="${H-h(reg)-h(rel)}" width="${bw}" height="${h(rel)}" fill="var(--b)"><title>${d.day} release ${fmt$(rel)}</title></rect>`;
-    svg+=`<text x="${x+bw/2}" y="${H-h(d.sales)-4}" text-anchor="middle">${fmt$(d.sales)}</text>`;
-    svg+=`<text x="${x+bw/2}" y="${H+14}" text-anchor="middle">${dow(d.day)}</text>`;
-    if(d.day>w.end) svg+=`<text x="${x+bw/2}" y="${H+26}" text-anchor="middle">outside channel range</text>`;
-  });
-  $('timeline').innerHTML=svg+'</svg>';
-  $('legend').innerHTML='<span><i class="sw" style="background:var(--a)"></i>Regular</span><span><i class="sw" style="background:var(--b)"></i>Release SKUs</span>';
+  $('k_hero').innerHTML=[
+    kpi('Attributed sales',f$(T.sales),T.sales,g(P,'sales'),'',1,'Last non-direct click, net of adjustments'),
+    kpi('Product net sales',f$(T.prod),T.prod,g(P,'prod'),'',1,`${w.start} – ${w.end}`),
+    kpi('Attributed orders',fN(T.orders),T.orders,g(P,'orders'),'',1),
+    kpi('Sessions',fN(T.sessions),T.sessions,g(P,'sessions'),'',1)].join('');
+  $('k_mini').innerHTML=[
+    kpi('Attributed AOV',f$(T.aov),T.aov,g(P,'aov')),
+    kpi('Conversion rate',fP(T.cvr),T.cvr,g(P,'cvr'),'rate'),
+    kpi('Units',fN(T.units),T.units,g(P,'units')),
+    kpi('New customers',fN(T.newc),T.newc,g(P,'newc')),
+    kpi('Returning customers',fN(T.retc),T.retc,g(P,'retc')),
+    kpi('Release share of sales',fP(T.rel),T.rel,g(P,'rel'),'rate'),
+    kpi('Markdown share',fP(T.md),T.md,g(P,'md'),'rate'),
+    `<div class="kpi mini"><div class="kpi-label">Ad spend · ROAS</div><div class="kpi-value">n/a</div><div class="kpi-note">Spend columns empty in export</div></div>`].join('');
+
+  // signals
+  const D=w.product_daily.filter(d=>d.day<=w.end),peak=D.reduce((a,b)=>b.sales>a.sales?b:a),topCh=w.channels[0],topCa=w.campaigns[0];
+  const klSends=w.campaigns.filter(c=>c.channel==='klaviyo'&&isSend(c.campaign));
+  $('signals').innerHTML=[
+    ['Peak day',dow(peak.day),`${f$(peak.sales)} = ${fP(peak.sales/T.prod)} of the week's product net sales; ${fP(peak.release_sales/peak.sales)} from release SKUs.`],
+    ['Top channel',`${esc(topCh.channel)} · ${f$(topCh.sales)}`,`${fP(topCh.sales/T.sales)} of attributed sales (${esc(topCh.traffic)}). Klaviyo drove ${fP(T.kl/T.sales)}.`],
+    ['Top campaign',esc(topCa.campaign),`${f$(topCa.sales)} from ${fN(topCa.orders)} orders on ${esc(topCa.channel)}.`],
+    ['Email sends that sold',`${klSends.length} dated sends`,`${f$(klSends.reduce((a,c)=>a+c.sales,0))} attributed; best: ${klSends[0]?esc(klSends[0].campaign):'–'}.`],
+    ['Attribution gap',f$(T.gap),`${fP(T.gap/T.prod)} of product net sales has no last non-direct click (direct traffic and definition differences).`]
+  ].map(([t,v,d])=>`<div class="sig-c"><div class="sig-t">${t}</div><div class="sig-v">${v}</div><div class="sig-d">${d}</div></div>`).join('');
+  trend($('ts_sm'),$('lg_sm'),w);
+
+  // notes
+  ['what','so','next'].forEach(k=>{let v='';try{v=localStorage.getItem(`ls_nt_${w.start}_${k}`)||''}catch(e){}$('nt_'+k).value=v});
+
+  // channels
+  $('k_ch').innerHTML=[kpi('Attributed sales',f$(T.sales),T.sales,g(P,'sales'),'',1),kpi('Paid sales',f$(T.paid),T.paid,g(P,'paid'),'',1),
+    kpi('Sessions',fN(T.sessions),T.sessions,g(P,'sessions'),'',1),kpi('Conversion rate',fP(T.cvr),T.cvr,g(P,'cvr'),'rate',1)].join('');
+  const prevCh={};if(pw)pw.channels.forEach(c=>prevCh[c.channel+'|'+c.traffic]=c);
+  const rows=w.channels.map(c=>{const p=prevCh[c.channel+'|'+c.traffic];return {...c,share:c.sales/T.sales,cvr:c.sessions?c.orders/c.sessions:0,aov:c.orders?c.sales/c.orders:0,
+      chg:p&&p.sales?(c.sales-p.sales)/p.sales:null}});
+  table($('t_ch'),[{k:'channel',h:'Channel'},{k:'traffic',h:'Type',f:v=>`<span class="pill ${v==='paid'?'p-paid':v==='organic'?'p-org':''}">${v}</span>`},
+    {k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:(v)=>fP(v)+bar(v)},{k:'chg',h:'vs PW',f:v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${(v*100).toFixed(1)}%</span>`},
+    {k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'new_cust',h:'New',f:fN},{k:'ret_cust',h:'Returning',f:fN}],
+    rows,'sales',{total:{channel:'Total',sales:f$(T.sales),share:'100%',orders:fN(T.orders),sessions:fN(T.sessions),cvr:fP(T.cvr),aov:f$(T.aov),new_cust:fN(T.newc),ret_cust:fN(T.retc)}});
+  const tt={};w.channels.forEach(c=>{const x=tt[c.traffic]??={traffic:c.traffic,sales:0,orders:0,sessions:0};x.sales+=c.sales;x.orders+=c.orders;x.sessions+=c.sessions});
+  table($('t_tt'),[{k:'traffic',h:'Traffic type',f:v=>`<span class="pill">${v}</span>`},{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},
+    {k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP}],
+    Object.values(tt).map(x=>({...x,share:x.sales/T.sales,cvr:x.sessions?x.orders/x.sessions:0})),'sales');
+
+  // campaigns
+  const cams=w.campaigns.map(c=>({...c,type:isSend(c.campaign)?'Send':'Always-on / other',sent:sendDate(c.campaign)||'',cvr:c.sessions?c.orders/c.sessions:0,aov:c.orders?c.sales/c.orders:0}));
+  const cs=cams.filter(c=>c.type==='Send'),cf=cams.filter(c=>c.type!=='Send'),sm=(a,k)=>a.reduce((x,c)=>x+c[k],0);
+  $('k_ca').innerHTML=[kpi('Top-25 campaign sales',f$(sm(cams,'sales')),sm(cams,'sales'),null,'',1),kpi('Dated sends',f$(sm(cs,'sales')),sm(cs,'sales'),null,'',1,`${cs.length} sends with sales`),
+    kpi('Always-on / other',f$(sm(cf,'sales')),sm(cf,'sales'),null,'',1,`${cf.length} lines with sales`),kpi('Top campaign share',fP(cams[0].sales/T.sales),cams[0].sales/T.sales,null,'rate',1,esc(cams[0].campaign))].join('');
+  table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Channel'},{k:'type',h:'Type',f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
+    {k:'sales',h:'Sales',f:f$},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'new_cust',h:'New',f:fN},{k:'ret_cust',h:'Returning',f:fN}],
+    cams,'sales',{detail:r=>dk('Campaign',esc(r.campaign))+dk('Channel',esc(r.channel))+dk('Sales per session',f$(r.sessions?r.sales/r.sessions:0))+dk('Share of attributed',fP(r.sales/T.sales))+dk('Sent',r.sent||'n/a')});
+
+  // products
+  const top=w.top_products,pt=top.reduce((a,p)=>a+p.sales,0);
+  $('k_pr').innerHTML=[kpi('Product net sales',f$(T.prod),T.prod,g(P,'prod'),'',1,`${w.start} – ${w.end}`),kpi('Units',fN(T.units),T.units,g(P,'units'),'',1),
+    kpi('Top 5 SKU share',fP(top.slice(0,5).reduce((a,p)=>a+p.sales,0)/w.product_total_all),0,null,'rate',1,'of full product file'),kpi('Release share',fP(T.rel),T.rel,g(P,'rel'),'rate',1)].join('');
+  drawProducts();
+  table($('t_vn'),[{k:'Product Vendor',h:'Vendor'},{k:'sales',h:'Net sales',f:f$},{k:'share',h:'% of file',f:v=>fP(v)+bar(v)},{k:'units',h:'Units',f:fN}],
+    w.vendors.map(v=>({...v,share:v.sales/w.product_total_all})),'sales');
 
   // heatmap
-  const days=D.map(d=>d.day), by={};
-  w.top_product_daily.forEach(r=>(by[r.SKU]??={})[r.day]=r.sales);
+  const days=w.product_daily.map(d=>d.day),by={};w.top_product_daily.forEach(r=>(by[r.SKU]??={})[r.day]=r.sales);
   const mx=Math.max(...w.top_product_daily.map(r=>r.sales));
-  $('heat').innerHTML='<table><thead><tr><th>Product</th><th>Vendor</th>'+days.map(d=>`<th>${dow(d)}</th>`).join('')+'<th>Total</th><th>Units</th></tr></thead><tbody>'+
-    w.top_products.map(p=>'<tr><td class="t">'+esc(p['Product Title'])+(p.Release==='Release'?' <span class="pill">release</span>':'')+'</td><td>'+esc(p['Product Vendor'])+'</td>'+
-      days.map(d=>{const v=(by[p.SKU]||{})[d]||0;const a=v?0.12+0.7*v/mx:0;return `<td class="cell" style="background:color-mix(in srgb,var(--a) ${a*100}%,transparent)">${v?fmt$(v):''}</td>`}).join('')+
-      `<td>${fmt$(p.sales)}</td><td>${fmtN(p.units)}</td></tr>`).join('')+'</tbody></table>';
+  $('hm').innerHTML='<table><thead><tr><th>Product</th><th>Vendor</th>'+days.map(d=>`<th>${dow(d)}</th>`).join('')+'<th>Total</th><th>Units</th></tr></thead><tbody>'+
+    top.slice(0,15).map(p=>`<tr><td class="nm">${esc(p['Product Title'])}${p.Release==='Release'?' <span class="pill p-rel">release</span>':''}</td><td>${esc(p['Product Vendor'])}</td>`+
+      days.map(d=>{const v=(by[p.SKU]||{})[d]||0;const a=v?12+60*v/mx:0;return `<td class="cell" style="background:color-mix(in srgb,#3987e5 ${a}%,transparent)">${v?f$(v):''}</td>`}).join('')+
+      `<td>${f$(p.sales)}</td><td>${fN(p.units)}</td></tr>`).join('')+'</tbody></table>';
+  const lo=new Date(w.start+'T12:00:00');lo.setDate(lo.getDate()-7);
+  const sends=w.campaigns.filter(c=>c.channel==='klaviyo'&&isSend(c.campaign)&&sendDate(c.campaign)>=lo.toISOString().slice(0,10)&&sendDate(c.campaign)<=w.end)
+    .map(c=>({...c,sent:sendDate(c.campaign)}));
+  table($('sends'),[{k:'sent',h:'Sent'},{k:'campaign',h:'Campaign',nm:1},{k:'sales',h:'Attributed sales',f:f$},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN}],sends,'sent');
 
-  const share=(v,t)=>t?pct(v/t):'–';
-  table($('channels'),[{k:'channel',h:'Channel'},{k:'traffic',h:'Type',f:v=>`<span class="pill">${v}</span>`},
-    {k:'sales',h:'Sales',f:fmt$},{k:'share',h:'% of attributed',f:pct},{k:'orders',h:'Orders',f:fmtN},{k:'sessions',h:'Sessions',f:fmtN},
-    {k:'cvr',h:'CVR',f:pct},{k:'aov',h:'AOV',f:fmt$},{k:'new_cust',h:'New cust.',f:fmtN},{k:'ret_cust',h:'Returning',f:fmtN}],
-    w.channels.map(c=>({...c,share:c.sales/T.sales,cvr:c.sessions?c.orders/c.sessions:0,aov:c.orders?c.sales/c.orders:0})),'sales');
-  table($('campaigns'),[{k:'campaign',h:'Campaign',cls:'t',f:esc},{k:'channel',h:'Channel'},{k:'sales',h:'Sales',f:fmt$},
-    {k:'orders',h:'Orders',f:fmtN},{k:'sessions',h:'Sessions',f:fmtN},{k:'cvr',h:'CVR',f:pct},{k:'new_cust',h:'New',f:fmtN},{k:'ret_cust',h:'Returning',f:fmtN}],
-    w.campaigns.map(c=>({...c,cvr:c.sessions?c.orders/c.sessions:0})),'sales');
-  table($('vendors'),[{k:'Product Vendor',h:'Vendor'},{k:'sales',h:'Net sales',f:fmt$},{k:'units',h:'Units',f:fmtN}],w.vendors.map(v=>({...v})),'sales');
-
-  const gap=w.product_total_in_window-w.attributed_net_of_adj;
-  const L=[
-   `<b>Attribution vs product sales.</b> Attributed ${fmt$(w.attributed_net_of_adj)} (after ${fmt$(-w.adjustments.reduce((a,x)=>a+x.sales,0))} of negative adjustments) vs product net sales ${fmt$(w.product_total_in_window)} for ${w.start}–${w.end}. Gap ${fmt$(gap)} (${pct(gap/w.product_total_in_window)}) — direct traffic is excluded from last non-direct click and the two reports define sales differently. Treat as separate lenses until reconciled.`,
-   `Product file also includes <b>${DATA.weeks[i].product_daily.filter(d=>d.day>w.end).map(d=>d.day).join(', ')||'no extra days'}</b>, outside the channel range; KPIs and the gap above use ${w.start}–${w.end} only.`,
-   `<b>Spend / impressions / clicks are empty</b> in both channel and campaign exports, so ROAS, CPA and CAC cannot be calculated.`,
-   `<b>Correlation is timeline-only.</b> Channel and campaign files are weekly totals with no daily split, and there is no product × channel file, so we cannot say which channel sold which product.`,
-   `${w.product_exact_dupe_rows} of ${w.product_rows} product rows are exact duplicates of another row. They are kept (no order id to tell repeat sales from double exports); dropping them would cut net sales materially. Please confirm.`,
-   `Negative attribution rows (refund/return effects) are excluded from tables: ${w.adjustments.concat(w.campaign_adjustments.filter(a=>!w.adjustments.some(x=>x.channel===a.channel))).map(a=>esc((a.campaign||a.channel))+' '+fmt$(a.sales)).join('; ')}.`,
-   `${w.channel_tail.channel}: ${fmtN(w.channel_tail.sessions)} sessions, $0 sales.`,
-   `Release SKUs were ${pct(w.release_share)} of product net sales and markdown lines ${pct(w.markdown_share)}.`,
-   P?'':'Only one week is loaded, so no week-over-week comparison yet.'];
-  $('checks').innerHTML=L.filter(Boolean).map(x=>`<li>${x}</li>`).join('');
+  // method
+  const gap=T.gap;
+  $('me_list').innerHTML=[
+   `<b>Attribution vs product sales.</b> Attributed ${f$(T.sales)} (after ${f$(-w.adjustments.reduce((a,x)=>a+x.sales,0))} of negative adjustments) vs product net sales ${f$(T.prod)} for ${w.start}–${w.end}. Gap ${f$(gap)} (${fP(gap/T.prod)}). Last non-direct click excludes direct traffic and the reports define sales differently, so treat them as separate lenses until reconciled.`,
+   `Product file also covers <b>${w.product_daily.filter(d=>d.day>w.end).map(d=>d.day).join(', ')||'no extra days'}</b>, outside the channel range. KPIs and the gap use ${w.start}–${w.end}; the trend chart shows every day in the file.`,
+   `<b>Spend, impressions and clicks are empty</b> in both channel and campaign exports, so ROAS, CPA and CAC cannot be calculated.`,
+   `<b>Correlation is timeline-only.</b> Channel and campaign files are weekly totals with no daily split and there is no product × channel file, so the dashboard cannot say which channel sold which product.`,
+   `${w.product_exact_dupe_rows} of ${w.product_rows} product rows are exact duplicates of another row. They are kept as separate sales lines (confirmed).`,
+   `Negative attribution rows are excluded from the tables: ${w.adjustments.concat(w.campaign_adjustments.filter(a=>!w.adjustments.some(x=>x.channel===a.channel))).map(a=>esc(a.campaign||a.channel)+' '+f$(a.sales)).join('; ')}.`,
+   `${esc(w.channel_tail.channel)}: ${fN(w.channel_tail.sessions)} sessions, $0 sales.`,
+   `Klaviyo clones and id suffixes are merged into one campaign name. Campaigns are limited to the top 25 by sales.`,
+   `PW = previous loaded week. PY = same week last year (not loaded). Volume metrics show % change; rate metrics show percentage-point change; AOV and CVR are recalculated from totals.`,
+   P?'':'Only one week is loaded, so week-over-week comparisons show n/a.'
+  ].filter(Boolean).map(x=>`<div class="note">${x}</div>`).join('');
+  $('foot').textContent=`Livestock marketing performance · source: Shopify marketing reports and product sales export · ${W.length} week(s) loaded.`;
 }
+function drawProducts(){
+  const w=W[cur],q=$('q_pr').value.toLowerCase(),fr=$('f_rel').checked,fm=$('f_md').checked;
+  const rows=w.top_products.filter(p=>(!q||(p['Product Title']+p['Product Vendor']).toLowerCase().includes(q))&&(!fr||p.Release==='Release')&&(!fm||p.md_sales>0))
+    .map(p=>({...p,asp:p.units?p.sales/p.units:0,mdshare:p.sales?p.md_sales/p.sales:0,share:p.sales/w.product_total_all}));
+  table($('t_pr'),[{k:'Product Title',h:'Product',nm:1,f:(v,r)=>esc(v)+(r.Release==='Release'?' <span class="pill p-rel">release</span>':'')},{k:'Product Vendor',h:'Vendor'},{k:'Department',h:'Department'},
+    {k:'sales',h:'Net sales',f:f$},{k:'share',h:'% of file',f:v=>fP(v)+bar(v*4)},{k:'units',h:'Units',f:fN},{k:'asp',h:'Avg price',f:f$},{k:'mdshare',h:'Markdown %',f:fP}],
+    rows,'sales',{detail:r=>dk('SKU',esc(r.SKU))+dk('Class',esc(r.CLASS||'–'))+dk('List price',f$(r.price))+dk('Markdown sales',f$(r.md_sales))+dk('Type',r.Release)});
+}
+/* ---------- wiring ---------- */
+W.forEach((w,i)=>$('periodSel').add(new Option(`${w.start} → ${w.end}`,i)));
+$('periodSel').value=cur;
+$('periodSel').onchange=e=>{cur=+e.target.value;render()};
+$('prevP').onclick=()=>{if(cur>0){cur--;$('periodSel').value=cur;render()}};
+$('nextP').onclick=()=>{if(cur<W.length-1){cur++;$('periodSel').value=cur;render()}};
+$('grainSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{grain=b.dataset.g;$('grainSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));trend($('ts_sm'),$('lg_sm'),W[cur])});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='p_'+t.dataset.t))});
+['q_pr','f_rel','f_md'].forEach(id=>$(id).oninput=drawProducts);
+const nk=()=>W[cur].start;
+$('saveNotes').onclick=()=>{['what','so','next'].forEach(k=>localStorage.setItem(`ls_nt_${nk()}_${k}`,$('nt_'+k).value));$('saveMsg').textContent=' Saved in this browser'};
+$('resetNotes').onclick=()=>{['what','so','next'].forEach(k=>{localStorage.removeItem(`ls_nt_${nk()}_${k}`);$('nt_'+k).value=''});$('saveMsg').textContent=' Cleared'};
+$('copyNotes').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(`WHAT\n${$('nt_what').value}\n\nSO WHAT\n${$('nt_so').value}\n\nWHAT'S NEXT\n${$('nt_next').value}`);$('saveMsg').textContent=' Copied'};
 render();
 </script>
 </body>
