@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Livestock Marketing Performance</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--ink:#16181d;--mute:#6b7280;--line:#e4e4e0;--a:#1f4fd8;--b:#e07a1f;--good:#0f8a4f;--bad:#c4302b}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1b1d22;--ink:#eceef2;--mute:#9aa1ad;--line:#2b2e35;--a:#6d8fff;--b:#f0a252;--good:#3ec585;--bad:#ff6b63}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header,main{max-width:1200px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.sub{color:var(--mute);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi .l{color:var(--mute);font-size:12px}.kpi .v{font-size:22px;font-weight:650;margin:2px 0}.kpi .d{font-size:12px;color:var(--mute)}
+table{border-collapse:collapse;width:100%}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mute);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
+td.t{white-space:normal;min-width:200px;max-width:380px}
+.pill{font-size:11px;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
+.warn{border-left:4px solid var(--b)}.warn li{margin:4px 0}
+select{font:inherit;padding:4px 8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px}
+.legend span{margin-right:12px;font-size:12px}.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.cell{text-align:center;font-size:11px;min-width:54px}
+svg text{fill:var(--mute);font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Livestock · Marketing &amp; Product Performance</h1>
+  <div class="sub" id="meta"></div></div>
+  <label class="sub">Week <select id="wk"></select></label>
+</header>
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card"><h2>Daily product net sales</h2>
+    <div class="legend" id="legend"></div><div id="timeline"></div></div>
+
+  <div class="card"><h2>Top products × day <span class="sub">(net sales, top 15 SKUs)</span></h2><div id="heat"></div></div>
+
+  <div class="card"><h2>Channels <span class="sub">last non-direct click, weekly total</span></h2><div id="channels"></div></div>
+  <div class="card"><h2>Campaigns <span class="sub">Klaviyo clones merged; top 25 by sales</span></h2><div id="campaigns"></div></div>
+  <div class="card"><h2>Vendors</h2><div id="vendors"></div></div>
+  <div class="card warn"><h2>Data checks &amp; limits</h2><ul id="checks"></ul></div>
+</main>
+<script>
+const DATA = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const fmt$ = n => n==null?'–':(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString();
+const fmtN = n => n==null?'–':Math.round(n).toLocaleString();
+const pct = n => n==null?'–':(n*100).toFixed(2)+'%';
+const dow = d => new Date(d+'T12:00:00').toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+DATA.weeks.forEach((w,i)=>$('wk').add(new Option(`${w.start} → ${w.end}`,i)));
+$('wk').value = DATA.weeks.length-1;
+$('wk').onchange = render;
+
+function delta(cur, prev, rate){
+  if(prev==null) return '<span class="d">no prior week loaded</span>';
+  if(rate){const d=(cur-prev)*100;return `<span class="d" style="color:var(--${d>=0?'good':'bad'})">${d>=0?'+':''}${d.toFixed(2)} pp</span>`}
+  if(!prev) return '<span class="d">new</span>';
+  const d=(cur-prev)/prev;return `<span class="d" style="color:var(--${d>=0?'good':'bad'})">${d>=0?'+':''}${(d*100).toFixed(1)}%</span>`;
+}
+function totals(w){
+  if(!w) return null;
+  const s=k=>w.channels.reduce((a,c)=>a+c[k],0);
+  const orders=s('orders'), sales=w.attributed_net_of_adj;
+  return {sales, orders, sessions:s('sessions')+w.channel_tail.sessions, aov:orders?sales/orders:0,
+          prod:w.product_total_in_window, units:w.product_units_in_window};
+}
+function table(el, cols, rows, sortKey){
+  let state={k:sortKey,dir:-1};
+  const draw=()=>{
+    rows.sort((a,b)=>(a[state.k]>b[state.k]?1:-1)*state.dir);
+    el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}">${c.h}${state.k===c.k?(state.dir<0?' ▾':' ▴'):''}</th>`).join('')+
+      '</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td class="${c.cls||''}">${c.f?c.f(r[c.k],r):r[c.k]}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+    el.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;state.dir=state.k===k?-state.dir:-1;state.k=k;draw()});
+  };draw();
+}
+
+function render(){
+  const i=+$('wk').value, w=DATA.weeks[i], prev=DATA.weeks[i-1], T=totals(w), P=totals(prev);
+  $('meta').textContent=`${DATA.banner} · weeks start ${DATA.week_start} · ${DATA.tz} · ${w.start} to ${w.end}`;
+  const k=[['Attributed sales',fmt$(T.sales),delta(T.sales,P&&P.sales)],
+           ['Attributed orders',fmtN(T.orders),delta(T.orders,P&&P.orders)],
+           ['Sessions',fmtN(T.sessions),delta(T.sessions,P&&P.sessions)],
+           ['Attributed AOV',fmt$(T.aov),delta(T.aov,P&&P.aov)],
+           [`Product net sales (to ${w.end.slice(5)})`,fmt$(T.prod),delta(T.prod,P&&P.prod)],
+           ['Units',fmtN(T.units),delta(T.units,P&&P.units)],
+           ['Ad spend / ROAS',w.paid_spend_filled?'see table':'n/a','<span class="d">spend export empty</span>']];
+  $('kpis').innerHTML=k.map(([l,v,d])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>${d}</div>`).join('');
+
+  // timeline
+  const D=w.product_daily, max=Math.max(...D.map(d=>d.sales)), W=Math.max(640,D.length*90), H=220, bw=Math.min(54,(W-60)/D.length-14);
+  let svg=`<svg viewBox="0 0 ${W} ${H+30}" width="100%" role="img" aria-label="Daily product net sales">`;
+  D.forEach((d,j)=>{
+    const x=50+j*((W-60)/D.length)+7, h=v=>v/max*(H-20);
+    const reg=d.sales-d.release_sales, rel=d.release_sales;
+    svg+=`<rect x="${x}" y="${H-h(reg)}" width="${bw}" height="${h(reg)}" fill="var(--a)"><title>${d.day} regular ${fmt$(reg)}</title></rect>`;
+    svg+=`<rect x="${x}" y="${H-h(reg)-h(rel)}" width="${bw}" height="${h(rel)}" fill="var(--b)"><title>${d.day} release ${fmt$(rel)}</title></rect>`;
+    svg+=`<text x="${x+bw/2}" y="${H-h(d.sales)-4}" text-anchor="middle">${fmt$(d.sales)}</text>`;
+    svg+=`<text x="${x+bw/2}" y="${H+14}" text-anchor="middle">${dow(d.day)}</text>`;
+    if(d.day>w.end) svg+=`<text x="${x+bw/2}" y="${H+26}" text-anchor="middle">outside channel range</text>`;
+  });
+  $('timeline').innerHTML=svg+'</svg>';
+  $('legend').innerHTML='<span><i class="sw" style="background:var(--a)"></i>Regular</span><span><i class="sw" style="background:var(--b)"></i>Release SKUs</span>';
+
+  // heatmap
+  const days=D.map(d=>d.day), by={};
+  w.top_product_daily.forEach(r=>(by[r.SKU]??={})[r.day]=r.sales);
+  const mx=Math.max(...w.top_product_daily.map(r=>r.sales));
+  $('heat').innerHTML='<table><thead><tr><th>Product</th><th>Vendor</th>'+days.map(d=>`<th>${dow(d)}</th>`).join('')+'<th>Total</th><th>Units</th></tr></thead><tbody>'+
+    w.top_products.map(p=>'<tr><td class="t">'+esc(p['Product Title'])+(p.Release==='Release'?' <span class="pill">release</span>':'')+'</td><td>'+esc(p['Product Vendor'])+'</td>'+
+      days.map(d=>{const v=(by[p.SKU]||{})[d]||0;const a=v?0.12+0.7*v/mx:0;return `<td class="cell" style="background:color-mix(in srgb,var(--a) ${a*100}%,transparent)">${v?fmt$(v):''}</td>`}).join('')+
+      `<td>${fmt$(p.sales)}</td><td>${fmtN(p.units)}</td></tr>`).join('')+'</tbody></table>';
+
+  const share=(v,t)=>t?pct(v/t):'–';
+  table($('channels'),[{k:'channel',h:'Channel'},{k:'traffic',h:'Type',f:v=>`<span class="pill">${v}</span>`},
+    {k:'sales',h:'Sales',f:fmt$},{k:'share',h:'% of attributed',f:pct},{k:'orders',h:'Orders',f:fmtN},{k:'sessions',h:'Sessions',f:fmtN},
+    {k:'cvr',h:'CVR',f:pct},{k:'aov',h:'AOV',f:fmt$},{k:'new_cust',h:'New cust.',f:fmtN},{k:'ret_cust',h:'Returning',f:fmtN}],
+    w.channels.map(c=>({...c,share:c.sales/T.sales,cvr:c.sessions?c.orders/c.sessions:0,aov:c.orders?c.sales/c.orders:0})),'sales');
+  table($('campaigns'),[{k:'campaign',h:'Campaign',cls:'t',f:esc},{k:'channel',h:'Channel'},{k:'sales',h:'Sales',f:fmt$},
+    {k:'orders',h:'Orders',f:fmtN},{k:'sessions',h:'Sessions',f:fmtN},{k:'cvr',h:'CVR',f:pct},{k:'new_cust',h:'New',f:fmtN},{k:'ret_cust',h:'Returning',f:fmtN}],
+    w.campaigns.map(c=>({...c,cvr:c.sessions?c.orders/c.sessions:0})),'sales');
+  table($('vendors'),[{k:'Product Vendor',h:'Vendor'},{k:'sales',h:'Net sales',f:fmt$},{k:'units',h:'Units',f:fmtN}],w.vendors.map(v=>({...v})),'sales');
+
+  const gap=w.product_total_in_window-w.attributed_net_of_adj;
+  const L=[
+   `<b>Attribution vs product sales.</b> Attributed ${fmt$(w.attributed_net_of_adj)} (after ${fmt$(-w.adjustments.reduce((a,x)=>a+x.sales,0))} of negative adjustments) vs product net sales ${fmt$(w.product_total_in_window)} for ${w.start}–${w.end}. Gap ${fmt$(gap)} (${pct(gap/w.product_total_in_window)}) — direct traffic is excluded from last non-direct click and the two reports define sales differently. Treat as separate lenses until reconciled.`,
+   `Product file also includes <b>${DATA.weeks[i].product_daily.filter(d=>d.day>w.end).map(d=>d.day).join(', ')||'no extra days'}</b>, outside the channel range; KPIs and the gap above use ${w.start}–${w.end} only.`,
+   `<b>Spend / impressions / clicks are empty</b> in both channel and campaign exports, so ROAS, CPA and CAC cannot be calculated.`,
+   `<b>Correlation is timeline-only.</b> Channel and campaign files are weekly totals with no daily split, and there is no product × channel file, so we cannot say which channel sold which product.`,
+   `${w.product_exact_dupe_rows} of ${w.product_rows} product rows are exact duplicates of another row. They are kept (no order id to tell repeat sales from double exports); dropping them would cut net sales materially. Please confirm.`,
+   `Negative attribution rows (refund/return effects) are excluded from tables: ${w.adjustments.concat(w.campaign_adjustments.filter(a=>!w.adjustments.some(x=>x.channel===a.channel))).map(a=>esc((a.campaign||a.channel))+' '+fmt$(a.sales)).join('; ')}.`,
+   `${w.channel_tail.channel}: ${fmtN(w.channel_tail.sessions)} sessions, $0 sales.`,
+   `Release SKUs were ${pct(w.release_share)} of product net sales and markdown lines ${pct(w.markdown_share)}.`,
+   P?'':'Only one week is loaded, so no week-over-week comparison yet.'];
+  $('checks').innerHTML=L.filter(Boolean).map(x=>`<li>${x}</li>`).join('');
+}
+render();
+</script>
+</body>
+</html>
