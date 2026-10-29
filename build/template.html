@@ -177,8 +177,8 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <div class="sec" id="kl_note"></div>
   <div class="kpi-strip"><div class="kpis" id="k_kl"></div></div>
   <div class="sec"><div class="sec-h">Period by period</div><div class="sec-s" id="pp_s"></div><div class="tw" id="t_pp"></div></div>
-  <div class="sec"><div class="sec-h">Campaigns versus flows</div><div class="sec-s">Klaviyo sales split by message type across the selected range (Shopify, last non-direct click).</div><div class="tw" id="t_cf"></div><div id="cf_note"></div></div>
-  <div class="sec"><div class="sec-h">Klaviyo campaigns</div><div class="sec-s">Sends dated inside the selected range. Klaviyo delivery and engagement joined to Shopify attributed results (last non-direct click) by Klaviyo message ID.</div><div class="tw" id="t_kl"></div></div>
+  <div class="sec"><div class="sec-h">Campaigns versus flows</div><div class="sec-s">Klaviyo revenue split by message type across the selected range, with the Shopify view alongside.</div><div class="tw" id="t_cf"></div><div id="cf_note"></div></div>
+  <div class="sec"><div class="sec-h">Klaviyo campaigns</div><div class="sec-s">Sends dated inside the selected range. Klaviyo delivery, engagement and revenue (Placed Order) joined to Shopify attributed results (last non-direct click) by Klaviyo message ID.</div><div class="tw" id="t_kl"></div></div>
   <div class="sec"><div class="sec-h">Klaviyo flows</div><div class="sec-s" id="fl_s"></div><div class="tw" id="t_fl"></div><div id="fl_note"></div></div>
 </div>
 
@@ -417,12 +417,12 @@ function render(){
   const prows=prodRows(cur),dayNet={};prows.forEach(x=>{const d=PR.days[x[0]];dayNet[d]=(dayNet[d]||0)+x[12]});
   const peak=Object.entries(dayNet).sort((a,b)=>b[1]-a[1])[0];
   const grps=Object.values(T.byGrp).sort((a,b)=>b.sales-a.sales),em=T.byGrp['Email'];
-  const sends=SENDS.filter(s=>inR(s.date,cur)),topSend=sends.slice().sort((a,b)=>(b.sales-a.sales)||(b.recipients-a.recipients))[0];
+  const sends=SENDS.filter(s=>inR(s.date,cur)),topSend=sends.slice().sort((a,b)=>((b.hasRev?b.convValue:0)-(a.hasRev?a.convValue:0))||(b.sales-a.sales)||(b.recipients-a.recipients))[0];
   const attrNoDirect=T.sales-(T.byGrp['Direct']?T.byGrp['Direct'].sales:0);
   $('signals').innerHTML=[
     ['Peak day',peak?lab(peak[0],{weekday:'short',month:'short',day:'numeric'}):'–',peak?`${f$(peak[1])} = ${fP(peak[1]/Pc.net)} of product net sales in range.`:'No product data in range.'],
     ['Top marketing channel',grps[0]?`${esc(grps[0].group)} · ${f$(grps[0].sales)}`:'–',grps[0]?`${fP(grps[0].sales/T.sales)} of attributed sales. ${em?'Email '+fP(em.sales/T.sales)+'.':''}`:'No channel data in range.'],
-    ['Top Klaviyo send',topSend?esc(topSend.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')):'–',topSend?`${f$(topSend.sales)} from ${fN(topSend.orders)} orders; ${fN(topSend.sessions)} sessions; ${fN(topSend.recipients)} recipients. ${sends.length} Klaviyo sends in range.`:'No Klaviyo sends in range.'],
+    ['Top Klaviyo send',topSend?esc(topSend.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')):'–',topSend?`${topSend.hasRev?f$(topSend.convValue)+' Klaviyo revenue from '+fN(topSend.conv)+' orders':f$(topSend.sales)+' Shopify sales'}; ${fN(topSend.recipients)} recipients. ${sends.length} Klaviyo sends in range.`:'No Klaviyo sends in range.'],
     ['Attribution gap',f$(Pc.net-T.sales),`Product net sales minus attributed sales (${fP((Pc.net-T.sales)/(Pc.net||1))} of net). Direct is ${f$(T.byGrp['Direct']?T.byGrp['Direct'].sales:0)}; excluding it attributed is ${f$(attrNoDirect)}.`]
   ].map(([t,v,d])=>`<div class="sig-c"><div class="sig-t">${t}</div><div class="sig-v">${v}</div><div class="sig-d">${d}</div></div>`).join('');
 
@@ -487,68 +487,74 @@ function renderCampaigns(R){
 const normFlow=n=>String(n).toLowerCase().replace(/\s*\([^)]*\)\s*$/,'').replace(/[_\s]+\d+[a-z]?$/,'').replace(/\s*#\d+.*$/,'').replace(/^ts[_ ]welcome$/,'welcome to livestock').trim();
 const kpiS=(l,v,n)=>`<div class="kpi hero"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div>${n?`<div class="kpi-note">${n}</div>`:''}</div>`;
 function renderKlaviyo(R){
-  const cur=R.cur,kc=[KL.campaigns[0].date,KL.campaigns[KL.campaigns.length-1].date],ss=SENDS.filter(s=>inR(s.date,cur));
-  $('kl_note').innerHTML=`<div class="note ${cur[0]<kc[0]||cur[1]>kc[1]?'warn':''}">Klaviyo campaign export covers <b>${kc[0]} → ${kc[1]}</b> (${KL.campaigns.length} sends). Shopify campaign data covers <b>${COV.ca[0]} → ${COV.ca[1]}</b>, so older sends show Klaviyo metrics only.</div>
-    <div class="note warn"><b>Klaviyo revenue is $0 in both exports</b>, and the "conversions" counts are far higher than Shopify orders (for example 378 conversions vs 6 Shopify orders for the Oct 22 Jellyfish send). The conversion metric in the export is probably not Placed Order. Re-export with Placed Order as the conversion metric to get revenue; until then use the Shopify attributed columns for sales.</div>`;
-  const sum=k=>ss.reduce((a,s)=>a+s[k],0),del=sum('delivered'),totSales=sum('sales');
+  const cur=R.cur,kc=[KL.campaigns[0].date,KL.campaigns[KL.campaigns.length-1].date],ss=SENDS.filter(s=>inR(s.date,cur)),FD=KL.flow_daily,dash=f=>v=>v==null?'–':f(v);
+  $('kl_note').innerHTML=`<div class="note ${cur[0]<kc[0]||cur[1]>kc[1]?'warn':''}">Klaviyo campaign data covers <b>${kc[0]} → ${kc[1]}</b> (${KL.campaigns.length} sends); daily flow data covers <b>${FD.days[0]} → ${FD.days[FD.days.length-1]}</b>. Shopify campaign data covers <b>${COV.ca[0]} → ${COV.ca[1]}</b>, so older sends show Klaviyo numbers only.</div>
+    <div class="note"><b>Two revenue views.</b> "KL revenue" is Klaviyo's own Placed Order attribution (opens and clicks within Klaviyo's window). "Shopify" columns are last non-direct click. They will not match, and neither includes the other's orders by design.</div>`;
+  /* flow daily lookups */
+  const fRows=FD.rows.filter(x=>inR(FD.days[x[0]],cur));
+  const flowRev=fRows.reduce((a,x)=>a+x[3],0),flowOrd=fRows.reduce((a,x)=>a+x[4],0),flowDel=fRows.reduce((a,x)=>a+x[2],0);
+  const sum=k=>ss.reduce((a,s)=>a+s[k],0),del=sum('delivered'),totSales=sum('sales'),campRev=ss.reduce((a,s)=>a+(s.hasRev?s.convValue:0),0),campOrd=ss.reduce((a,s)=>a+(s.hasRev?s.conv:0),0),campRec=ss.reduce((a,s)=>a+(s.hasRev?s.recipients:0),0);
   $('k_kl').innerHTML=[kpiS('Sends',fN(ss.length),`${ss.filter(s=>s.matched).length} matched to Shopify`),kpiS('Recipients',fN(sum('recipients'))),
     kpiS('Open rate',fP(del?sum('uopens')/del:0),'Unique opens ÷ delivered'),kpiS('Click rate',fP(del?sum('uclicks')/del:0),'Unique clicks ÷ delivered'),
-    kpiS('Unsubscribe rate',fP(del?sum('unsub')/del:0)),kpiS('Shopify attributed sales',f$(totSales),'Matched sends, last non-direct click')].join('');
-  const rows=ss.map(s=>({...s,openR:s.delivered?s.uopens/s.delivered:0,clickR:s.delivered?s.uclicks/s.delivered:0,unsubR:s.delivered?s.unsub/s.delivered:0,
-    sess:s.matched?s.sessions:null,sal:s.matched?s.sales:null,ord:s.matched?s.orders:null,share:s.matched&&totSales?s.sales/totSales:null,
-    per1k:s.matched&&s.recipients?s.sales/s.recipients*1000:null}));
-  const dash=f=>v=>v==null?'–':f(v);
-  table($('t_kl'),[{k:'date',h:'Sent'},{k:'name',h:'Campaign',nm:1},{k:'audience',h:'Audience',l:1,nm:1},{k:'subject',h:'Subject line',nm:1},{k:'recipients',h:'Recipients',f:fN},{k:'delivered',h:'Delivered',f:fN},
-    {k:'openR',h:'Open rate',f:fP},{k:'clickR',h:'Click rate',f:fP},{k:'unsubR',h:'Unsub rate',f:fP},{k:'conv',h:'KL conversions',f:fN},
-    {k:'sess',h:'Sessions',f:dash(fN)},{k:'ord',h:'Orders',f:dash(fN)},{k:'sal',h:'Sales',f:dash(f$)},{k:'share',h:'% of total',f:v=>v==null?'–':fP(v)+bar(v*3)},{k:'per1k',h:'Sales / 1k recipients',f:dash(f$)}],
-    rows,'date',{total:{name:'Total',recipients:fN(sum('recipients')),delivered:fN(del),openR:fP(del?sum('uopens')/del:0),clickR:fP(del?sum('uclicks')/del:0),unsubR:fP(del?sum('unsub')/del:0),
-      conv:fN(sum('conv')),sess:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.sessions,0)),ord:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.orders,0)),sal:f$(totSales),share:'100%'},
-    detail:r=>dk('Message ID',esc(r.mid))+dk('Send time',esc(r.date+' '+r.time+' '+r.dow))+dk('Total bounced',fN(r.bounced))+dk('Spam complaints',fN(r.spam))+dk('Unique clicks',fN(r.uclicks))+dk('Subject',esc(r.subject||'–'))});
+    kpiS('Unsubscribe rate',fP(del?sum('unsub')/del:0)),kpiS('Campaign revenue (KL)',f$(campRev),`${fN(campOrd)} orders`),kpiS('Flow revenue (KL)',f$(flowRev),`${fN(flowOrd)} orders`),
+    kpiS('Email revenue (KL)',f$(campRev+flowRev),`Flows are ${fP(campRev+flowRev?flowRev/(campRev+flowRev):0)} of the total`)].join('');
   /* period by period */
   const g=S.grain,len=g==='day'?1:g==='week'?7:30.4375,EM=EMAIL_DAILY;
   const bounds=k=>g==='day'?[k,k]:g==='week'?[k,addDays(k,6)]:[k+'-01',(()=>{const d=D0(k+'-01');d.setMonth(d.getMonth()+1);d.setDate(0);return ISO(d)})()];
   const prevKey=k=>g==='day'?addDays(k,-1):g==='week'?addDays(k,-7):(()=>{const d=D0(k+'-01');d.setMonth(d.getMonth()-1);return ISO(d).slice(0,7)})();
   const emSum=(a,b)=>{const t={sales:0,orders:0,sessions:0};for(let d=a;d<=b;d=addDays(d,1)){const e=EM[d];if(e){t.sales+=e[0];t.orders+=e[1];t.sessions+=e[2]}}return t};
-  const klSum=(a,b)=>{const t={rec:0,del:0,uo:0,uc:0,un:0,ms:0,mr:0,n:0};SENDS.forEach(s=>{if(s.date>=a&&s.date<=b){t.rec+=s.recipients;t.del+=s.delivered;t.uo+=s.uopens;t.uc+=s.uclicks;t.un+=s.unsub;t.n++;if(s.matched){t.ms+=s.sales;t.mr+=s.recipients}}});return t};
-  const klCov=[KL.campaigns[0].date,KL.campaigns[KL.campaigns.length-1].date],inKl=(a,b)=>a>=klCov[0]&&b<=klCov[1];
+  const klSum=(a,b)=>{const t={rec:0,del:0,uo:0,uc:0,un:0,rv:0,rr:0,n:0};SENDS.forEach(s=>{if(s.date>=a&&s.date<=b){t.rec+=s.recipients;t.del+=s.delivered;t.uo+=s.uopens;t.uc+=s.uclicks;t.un+=s.unsub;t.n++;if(s.hasRev){t.rv+=s.convValue;t.rr+=s.recipients}}});return t};
+  const fdDay={};FD.rows.forEach(x=>{const d=FD.days[x[0]];fdDay[d]=(fdDay[d]||0)+x[3]});
+  const flSum=(a,b)=>{let s=0;for(let d=a;d<=b;d=addDays(d,1))s+=fdDay[d]||0;return s};
+  const klCov=kc,fdCov=[FD.days[0],FD.days[FD.days.length-1]],inKl=(a,b)=>a>=klCov[0]&&b<=klCov[1],inFd=(a,b)=>a>=fdCov[0]&&b<=fdCov[1];
   const ytdS=cur[1].slice(0,4)+'-01-01',ytdE=cur[1]<COV.ch[1]?cur[1]:COV.ch[1],ytd=emSum(ytdS,ytdE),ytdDays=Math.max(1,diffDays(ytdS,ytdE)+1);
-  const mk2=k=>{const [a,b]=bounds(k),e=emSum(a,b),pk=prevKey(k),[pa,pb]=bounds(pk),pe=emSum(pa,pb),pye=emSum(addDays(a,-364),addDays(b,-364)),kk=klSum(a,b),exp=ytd.sales/ytdDays*(diffDays(a,b)+1);
+  const mk2=k=>{const [a,b]=bounds(k),e=emSum(a,b),[pa,pb]=bounds(prevKey(k)),pe=emSum(pa,pb),pye=emSum(addDays(a,-364),addDays(b,-364)),kk=klSum(a,b),exp=ytd.sales/ytdDays*(diffDays(a,b)+1);
     const has=a<=COV.ch[1],ok=inKl(a,b);
     return {start:a,label:blabel(k,g)+(b>COV.ch[1]?' (partial)':''),sales:e.sales,vsPrev:has&&pb>=COV.ch[0]&&pe.sales?e.sales/pe.sales-1:null,vsPY:addDays(a,-364)>=COV.ch[0]&&pye.sales?e.sales/pye.sales-1:null,
-      vsYTD:exp?e.sales/exp-1:null,orders:e.orders,aov:e.orders?e.sales/e.orders:0,sessions:e.sessions,cvr:e.sessions?e.orders/e.sessions:0,
-      rec:ok?kk.rec:null,openR:ok&&kk.del?kk.uo/kk.del:null,clickR:ok&&kk.del?kk.uc/kk.del:null,unsubR:ok&&kk.del?kk.un/kk.del:null,per1k:ok&&kk.mr?kk.ms/kk.mr*1000:null}};
+      vsYTD:exp?e.sales/exp-1:null,crev:ok?kk.rv:null,frev:inFd(a,b)?flSum(a,b):null,orders:e.orders,aov:e.orders?e.sales/e.orders:0,sessions:e.sessions,cvr:e.sessions?e.orders/e.sessions:0,
+      rec:ok?kk.rec:null,openR:ok&&kk.del?kk.uo/kk.del:null,clickR:ok&&kk.del?kk.uc/kk.del:null,unsubR:ok&&kk.del?kk.un/kk.del:null,per1k:ok&&kk.rr?kk.rv/kk.rr*1000:null}};
   const pk=[...new Set([...Array(diffDays(cur[0],cur[1])+1)].map((_,i)=>bucket(addDays(cur[0],i),g)))],prow=pk.map(mk2);
   const pct=v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${(v*100).toFixed(1)}%</span>`;
-  $('pp_s').innerHTML=`Email = Shopify marketing channel group "Email" (Klaviyo, Spently, Mailchimp, Shopify Email), last click. Each row compares to the period before it; PY is the same days 364 days earlier; vs YTD compares with the year-to-date average per ${g}. Recipients and rates are Klaviyo <b>campaign</b> sends only (flows have no dates), from ${klCov[0]}. Follows the Day/Week/Month toggle.`;
-  const kt=klSum(klCov[0]>ytdS?klCov[0]:ytdS,klCov[1]<ytdE?klCov[1]:ytdE),ktDays=Math.max(1,diffDays(klCov[0]>ytdS?klCov[0]:ytdS,klCov[1]<ytdE?klCov[1]:ytdE)+1);
-  table($('t_pp'),[{k:'start',h:'Period',f:(v,r)=>r.label},{k:'sales',h:'Email sales',f:f$},{k:'vsPrev',h:'vs prev',f:pct},{k:'vsPY',h:'vs PY',f:pct},{k:'vsYTD',h:'vs YTD avg',f:pct},{k:'orders',h:'Orders',f:fN},{k:'aov',h:'AOV',f:f$},
-    {k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'rec',h:'Recipients',f:v=>v==null?'–':fN(v)},{k:'openR',h:'Open %',f:v=>v==null?'–':fP(v)},{k:'clickR',h:'Click %',f:v=>v==null?'–':fP(v)},
-    {k:'unsubR',h:'Unsub %',f:v=>v==null?'–':fP(v)},{k:'per1k',h:'Sales / 1k recip.',f:v=>v==null?'–':f$(v)}],prow,'start',
+  $('pp_s').innerHTML=`<b>Email sales</b> = Shopify marketing channel group "Email" (Klaviyo, Spently, Mailchimp, Shopify Email), last click. <b>KL campaign / flow revenue</b> = Klaviyo Placed Order attribution. Each row compares to the period before it; PY is the same days 364 days earlier; vs YTD compares with the year-to-date average per ${g}. Recipients and rates are Klaviyo campaign sends only (flows have no sends). Follows the Day/Week/Month toggle.`;
+  const ks0=klCov[0]>ytdS?klCov[0]:ytdS,ks1=klCov[1]<ytdE?klCov[1]:ytdE,kt=klSum(ks0,ks1),ktDays=Math.max(1,diffDays(ks0,ks1)+1),fs0=fdCov[0]>ytdS?fdCov[0]:ytdS,fs1=fdCov[1]<ytdE?fdCov[1]:ytdE,ftDays=Math.max(1,diffDays(fs0,fs1)+1);
+  table($('t_pp'),[{k:'start',h:'Period',f:(v,r)=>r.label},{k:'sales',h:'Email sales',f:f$},{k:'vsPrev',h:'vs prev',f:pct},{k:'vsPY',h:'vs PY',f:pct},{k:'vsYTD',h:'vs YTD avg',f:pct},
+    {k:'crev',h:'KL campaign rev',f:dash(f$)},{k:'frev',h:'KL flow rev',f:dash(f$)},{k:'orders',h:'Orders',f:fN},{k:'aov',h:'AOV',f:f$},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},
+    {k:'rec',h:'Recipients',f:dash(fN)},{k:'openR',h:'Open %',f:dash(fP)},{k:'clickR',h:'Click %',f:dash(fP)},{k:'unsubR',h:'Unsub %',f:dash(fP)},{k:'per1k',h:'KL rev / 1k recip.',f:dash(f$)}],prow,'start',
     {total:{start:`YTD average per ${g}`,sales:f$(ytd.sales/ytdDays*len),orders:fN(ytd.orders/ytdDays*len),aov:f$(ytd.orders?ytd.sales/ytd.orders:0),sessions:fN(ytd.sessions/ytdDays*len),cvr:fP(ytd.sessions?ytd.orders/ytd.sessions:0),
-      rec:fN(kt.rec/ktDays*len),openR:fP(kt.del?kt.uo/kt.del:0),clickR:fP(kt.del?kt.uc/kt.del:0),unsubR:fP(kt.del?kt.un/kt.del:0)}});
+      crev:f$(kt.rv/ktDays*len),frev:f$(flSum(fs0,fs1)/ftDays*len),rec:fN(kt.rec/ktDays*len),openR:fP(kt.del?kt.uo/kt.del:0),clickR:fP(kt.del?kt.uc/kt.del:0),unsubR:fP(kt.del?kt.un/kt.del:0),per1k:kt.rr?f$(kt.rv/kt.rr*1000):'–'}});
   /* campaigns versus flows */
   const clo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],chi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1],cf={c:{sales:0,orders:0,sessions:0},f:{sales:0,orders:0,sessions:0}};
   for(const x of CA.rows){const d=CA.days[x[0]];if(d<clo||d>chi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo')continue;const a=isSend(c.campaign)?cf.c:cf.f;a.sales+=x[2];a.orders+=x[4];a.sessions+=x[3]}
-  const ks=klSum(cur[0],cur[1]),cfT=cf.c.sales+cf.f.sales,fl=KL.flows;
-  const cfRows=[{type:'Campaigns',...cf.c,share:cfT?cf.c.sales/cfT:0,aov:cf.c.orders?cf.c.sales/cf.c.orders:0,rec:ks.rec,per1k:ks.mr?ks.ms/ks.mr*1000:null,n:ks.n},
-    {type:'Flows',...cf.f,share:cfT?cf.f.sales/cfT:0,aov:cf.f.orders?cf.f.sales/cf.f.orders:0,rec:null,per1k:null,n:fl.length}];
-  table($('t_cf'),[{k:'type',h:'Type'},{k:'sales',h:'Sales',f:f$},{k:'share',h:'Share',f:v=>fP(v)+bar(v)},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'n',h:'Sends / flows',f:fN},
-    {k:'rec',h:'Recipients',f:v=>v==null?'n/a':fN(v)},{k:'per1k',h:'Sales / 1k recip.',f:v=>v==null?'–':f$(v)},{k:'aov',h:'AOV',f:f$}],cfRows,'sales',{total:{type:'Total',sales:f$(cfT),share:'100%',orders:fN(cf.c.orders+cf.f.orders),sessions:fN(cf.c.sessions+cf.f.sessions)}});
-  $('cf_note').innerHTML=(`<div class="note" style="margin-top:10px">Shopify Klaviyo data covers ${COV.ca[0]} → ${COV.ca[1]}; showing ${clo} → ${chi}. "Flows" are Klaviyo lines whose name is not a dated send. Flow recipients are not shown because the flow export has no dates (all-time snapshot: ${fN(fl.reduce((a,f)=>a+f.recipients,0))} recipients across ${fl.length} flows).</div>`);
-  /* flows */
-  const lo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],hi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1],sh={};
+  const rvT=campRev+flowRev,cfRows=[{type:'Campaigns',rev:campRev,kord:campOrd,rec:sum('recipients'),n:ss.length,...cf.c},{type:'Flows',rev:flowRev,kord:flowOrd,rec:flowDel,n:new Set(fRows.map(x=>x[1])).size,...cf.f}]
+    .map(r=>({...r,share:rvT?r.rev/rvT:0,per1k:r.rec?r.rev/r.rec*1000:null,kaov:r.kord?r.rev/r.kord:0}));
+  table($('t_cf'),[{k:'type',h:'Type'},{k:'rev',h:'KL revenue',f:f$},{k:'share',h:'Share',f:v=>fP(v)+bar(v)},{k:'kord',h:'KL orders',f:fN},{k:'kaov',h:'KL AOV',f:f$},{k:'n',h:'Sends / flows',f:fN},
+    {k:'rec',h:'Recipients / deliveries',f:fN},{k:'per1k',h:'Rev / 1k',f:dash(f$)},{k:'sales',h:'Shopify sales',f:f$},{k:'orders',h:'Shopify orders',f:fN},{k:'sessions',h:'Shopify sessions',f:fN}],cfRows,'rev',
+    {total:{type:'Total',rev:f$(rvT),share:'100%',kord:fN(campOrd+flowOrd),rec:fN(sum('recipients')+flowDel),sales:f$(cf.c.sales+cf.f.sales),orders:fN(cf.c.orders+cf.f.orders),sessions:fN(cf.c.sessions+cf.f.sessions)}});
+  $('cf_note').innerHTML=`<div class="note" style="margin-top:10px">Campaign recipients are people sent to; flow figures are emails delivered. Shopify columns cover ${COV.ca[0]} → ${COV.ca[1]} (showing ${clo} → ${chi}); "Flows" there are Klaviyo lines whose name is not a dated send.</div>`;
+  /* sends table */
+  const rows=ss.map(s=>({...s,openR:s.delivered?s.uopens/s.delivered:0,clickR:s.delivered?s.uclicks/s.delivered:0,unsubR:s.delivered?s.unsub/s.delivered:0,
+    krev:s.hasRev?s.convValue:null,kord:s.hasRev?s.conv:null,kshare:s.hasRev&&campRev?s.convValue/campRev:null,kper1k:s.hasRev&&s.recipients?s.convValue/s.recipients*1000:null,
+    sess:s.matched?s.sessions:null,sal:s.matched?s.sales:null,ord:s.matched?s.orders:null}));
+  table($('t_kl'),[{k:'date',h:'Sent'},{k:'name',h:'Campaign',nm:1},{k:'audience',h:'Audience',l:1,nm:1},{k:'subject',h:'Subject line',nm:1},{k:'recipients',h:'Recipients',f:fN},{k:'delivered',h:'Delivered',f:fN},
+    {k:'openR',h:'Open rate',f:fP},{k:'clickR',h:'Click rate',f:fP},{k:'unsubR',h:'Unsub rate',f:fP},{k:'krev',h:'KL revenue',f:dash(f$)},{k:'kshare',h:'% of KL rev',f:v=>v==null?'–':fP(v)+bar(v*3)},{k:'kord',h:'KL orders',f:dash(fN)},{k:'kper1k',h:'KL rev / 1k',f:dash(f$)},
+    {k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],
+    rows,'date',{total:{name:'Total',recipients:fN(sum('recipients')),delivered:fN(del),openR:fP(del?sum('uopens')/del:0),clickR:fP(del?sum('uclicks')/del:0),unsubR:fP(del?sum('unsub')/del:0),
+      krev:f$(campRev),kshare:'100%',kord:fN(campOrd),kper1k:campRec?f$(campRev/campRec*1000):'–',sess:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.sessions,0)),ord:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.orders,0)),sal:f$(totSales)},
+    detail:r=>dk('Message ID',esc(r.mid))+dk('Send time',esc(r.date+' '+r.time+' '+(r.dow||'')))+dk('Total bounced',fN(r.bounced))+dk('Spam complaints',fN(r.spam))+dk('Unique clicks',fN(r.uclicks))+dk('Subject',esc(r.subject||'–'))});
+  /* flows (daily data, follows the date range) */
+  const lo=clo,hi=chi,sh={};
   for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||isSend(c.campaign))continue;
     const k=normFlow(c.campaign),a=sh[k]??={sales:0,sessions:0,orders:0,names:new Set()};a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.names.add(c.campaign)}
-  const totDel=KL.flows.reduce((a,f)=>a+f.deliveries,0),used=new Set();
-  const frows=KL.flows.map(f=>{const k=normFlow(f.flow),s=sh[k];if(s)used.add(k);
-    return {...f,share:totDel?f.deliveries/totDel:0,convPerDel:f.deliveries?f.conv/f.deliveries:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
-  $('fl_s').innerHTML=`Snapshot from the flow analytics export (${KL.flow_file}). The file has no date range, so it does not follow the date picker. Shopify columns are for ${lo} → ${hi} and are matched by flow name; flow revenue in the Klaviyo export is $0 (see note above).`;
+  const fm={};fRows.forEach(x=>{const n=FD.flows[x[1]],r=fm[n]??={flow:n,deliveries:0,rev:0,orders:0};r.deliveries+=x[2];r.rev+=x[3];r.orders+=x[4]});
+  const used=new Set(),frows=Object.values(fm).map(r=>{const k=normFlow(r.flow),s=sh[k];if(s)used.add(k);
+    return {...r,share:flowDel?r.deliveries/flowDel:0,rshare:flowRev?r.rev/flowRev:0,per1k:r.deliveries?r.rev/r.deliveries*1000:null,aov:r.orders?r.rev/r.orders:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
+  $('fl_s').innerHTML=`Daily flow data from Klaviyo for ${cur[0]} → ${cur[1]}: deliveries are emails delivered and revenue is Placed Order attributed to the flow. Shopify columns are for ${lo} → ${hi}, matched by flow name. Follows the date range.`;
   const unmatched=Object.entries(sh).filter(([k])=>!used.has(k)).map(([k,v])=>({k,...v})).filter(v=>v.sales!==0||v.sessions>=50);
-  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'recipients',h:'Recipients',f:fN},{k:'conv',h:'KL conversions',f:fN},
-    {k:'convRate',h:'KL conv. rate',f:v=>v==null?'–':fP(v)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'deliveries',
-    {total:{flow:'Total',deliveries:fN(totDel),share:'100%',recipients:fN(KL.flows.reduce((a,f)=>a+f.recipients,0)),conv:fN(KL.flows.reduce((a,f)=>a+f.conv,0)),
+  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'rev',h:'KL revenue',f:f$},{k:'rshare',h:'% of flow rev',f:v=>fP(v)+bar(v)},
+    {k:'orders',h:'KL orders',f:fN},{k:'aov',h:'KL AOV',f:f$},{k:'per1k',h:'Rev / 1k deliveries',f:dash(f$)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'rev',
+    {total:{flow:'Total',deliveries:fN(flowDel),share:'100%',rev:f$(flowRev),rshare:'100%',orders:fN(flowOrd),aov:f$(flowOrd?flowRev/flowOrd:0),per1k:flowDel?f$(flowRev/flowDel*1000):'–',
       sess:fN(frows.reduce((a,f)=>a+(f.sess||0),0)),ord:fN(frows.reduce((a,f)=>a+(f.ord||0),0)),sal:f$(frows.reduce((a,f)=>a+(f.sal||0),0))}});
-  $('fl_note').innerHTML=unmatched.length?`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow in the export: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`:'';
+  $('fl_note').innerHTML=unmatched.length?`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`:'';
 }
 
 /* ---- product performance ---- */
@@ -649,6 +655,7 @@ function renderMethod(R,T,P){
    `<b>Unattributed rows.</b> Rows with a blank marketing channel are shown as "(unattributed)".`,
    `<b>Ad spend.</b> The exports contain no spend, impressions or clicks, so ROAS, CPA and CAC are not shown.`,
    `<b>Identical product lines.</b> Rows with the same date, SKU, size and region are summed together. Nothing is dropped, so totals match the source files.`,
+   `<b>Klaviyo revenue.</b> Pulled from Klaviyo with Placed Order as the conversion metric: campaign revenue by send (email only; push and SMS are excluded) and daily flow revenue and deliveries. Klaviyo uses its own attribution window, so it differs from Shopify's last non-direct click.`,
    `<b>Klaviyo sends.</b> A "send" is any campaign whose name begins with a date (YYYY_MM_DD_). The date in the name is treated as the send date. Clones and id suffixes are merged.`,
    `<b>Vendor lift.</b> The vendor is guessed from the campaign name; a send that names no vendor is compared against all vendors. The comparison is 3 days before vs the send day and next 2 days. It does not remove the effect of releases, sales or other channels running at the same time.`,
    `<b>Comparisons.</b> CMP is the selected comparison range. PY is the same weekdays 364 days earlier. Volume metrics show % change; rate metrics show percentage-point change; AOV, CVR and average price are recalculated from totals.`

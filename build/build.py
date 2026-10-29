@@ -122,15 +122,32 @@ def pct(v):
 kl_campaigns, seen = [], {}
 for f in sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaignListReport_*.csv")), key=end_of):
     for r in pd.read_csv(f).itertuples(index=False):
-        seen[r[1]] = r  # newer export wins per message id
-for r in seen.values():
-    kl_campaigns.append({
-        "id": r[0], "mid": r[1], "name": str(r[2]), "date": str(r[6])[:10], "time": str(r[6])[11:16], "dow": r[7],
-        "subject": "" if pd.isna(r[8]) else str(r[8]), "audience": "" if pd.isna(r[5]) else str(r[5]),
-        "recipients": int(r[10] or 0), "conv": int(r[11] or 0), "convValue": float(r[13] or 0),
-        "uopens": int(r[16] or 0), "uclicks": int(r[19] or 0), "clicks": int(r[21] or 0), "unsub": int(r[22] or 0),
-        "spam": int(r[24] or 0), "delivered": int(r[26] or 0), "bounced": int(r[27] or 0)})
-kl_campaigns.sort(key=lambda x: x["date"])
+        seen[r[1]] = {
+            "id": r[0], "mid": r[1], "name": str(r[2]), "date": str(r[6])[:10], "time": str(r[6])[11:16], "dow": r[7],
+            "subject": "" if pd.isna(r[8]) else str(r[8]), "audience": "" if pd.isna(r[5]) else str(r[5]),
+            "recipients": int(r[10] or 0), "conv": 0, "convValue": 0.0, "uopens": int(r[16] or 0), "uclicks": int(r[19] or 0),
+            "clicks": int(r[21] or 0), "unsub": int(r[22] or 0), "spam": int(r[24] or 0), "delivered": int(r[26] or 0),
+            "bounced": int(r[27] or 0), "hasRev": False}
+# campaign report from the Klaviyo API (Placed Order conversion metric): adds real revenue and orders
+for f in sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaign_report_*.csv")), key=end_of):
+    for r in pd.read_csv(f).itertuples(index=False):
+        if len(r) > 12 and r[12] != "email":
+            continue  # push / SMS are not part of the email view
+        d = seen.setdefault(r[0], {"id": r[0], "mid": r[0], "name": str(r[1]), "date": str(r[2]), "time": str(r[3]), "dow": "",
+                                   "subject": "", "audience": "", "clicks": 0, "spam": 0, "bounced": 0})
+        d.update({"audience": d.get("audience") or ("" if pd.isna(r[4]) else str(r[4])), "recipients": int(r[5] or 0), "delivered": int(r[6] or 0),
+                  "uopens": int(r[7] or 0), "uclicks": int(r[8] or 0), "unsub": int(r[9] or 0), "conv": int(r[10] or 0),
+                  "convValue": round(float(r[11] or 0), 2), "hasRev": True})
+kl_campaigns = sorted(seen.values(), key=lambda x: x["date"])
+
+# daily flow performance: deliveries (Received Email) and Placed Order revenue/orders attributed to each flow
+fd_days, fd_flows, fd_rows = [], [], []
+fdf = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "flow_daily_*.csv")), key=end_of)
+if fdf:
+    fdd = pd.read_csv(fdf[-1])
+    fd_days, d_ix2 = table(fdd.Day)
+    fd_flows, f_ix2 = table(fdd.Flow)
+    fd_rows = [[d_ix2[r[0]], f_ix2[r[2]], int(r[3]), round(float(r[4]), 2), int(r[5])] for r in fdd.itertuples(index=False)]
 kl_flows, flow_file = [], ""
 ff = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "flow-analytics_*.csv")), key=end_of)
 if ff:
@@ -138,7 +155,8 @@ if ff:
     for r in pd.read_csv(ff[-1]).itertuples(index=False):
         kl_flows.append({"flow": str(r[1]), "revenue": float(r[2] or 0), "conv": int(r[3] or 0), "convRate": pct(r[4]),
                          "deliveries": int(r[5] or 0), "recipients": int(r[6] or 0)})
-klaviyo = {"campaigns": kl_campaigns, "flows": kl_flows, "flow_file": flow_file}
+klaviyo = {"campaigns": kl_campaigns, "flows": kl_flows, "flow_file": flow_file,
+           "flow_daily": {"days": fd_days, "flows": fd_flows, "rows": fd_rows, "fields": ["d", "flow", "deliveries", "revenue", "orders"]}}
 
 # ---------------------------------------------------------------- products (daily lines)
 P = load_folder("product", "Date", dtype={"SKU": str, "Size": str})
@@ -182,4 +200,4 @@ with open(os.path.join(ROOT, "index.html"), "w") as f:
     f.write(html)
 print(f"built index.html {len(html)/1e6:.1f} MB | channels {len(c_rows):,} rows {c_days[0]}..{c_days[-1]} | "
       f"campaigns {len(k_rows):,} rows {k_days[0]}..{k_days[-1]} | product {len(p_rows):,} rows {p_days[0]}..{p_days[-1]} | "
-      f"klaviyo {len(kl_campaigns)} campaigns, {len(kl_flows)} flows")
+      f"klaviyo {len(kl_campaigns)} campaigns, {len(fd_rows)} daily flow rows")
