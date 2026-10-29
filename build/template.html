@@ -144,7 +144,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
 <div class="tab-panel" id="p_ch">
   <div class="kpi-strip"><div class="kpis" id="k_ch"></div></div>
   <div class="sec"><div class="sec-h">Channel detail</div><div class="sec-s">Last non-direct click, weekly total. Click a column to sort.</div><div class="tw" id="t_ch"></div></div>
-  <div class="sec"><div class="sec-h">Traffic type</div><div class="sec-s">Paid, organic and unclassified traffic across the week.</div><div id="t_tt"></div></div>
+  <div class="sec"><div class="sec-h">Marketing channels</div><div class="sec-s">Sources rolled up into channel groups. Klaviyo, Spently, Mailchimp and Shopify Email sit under Email.</div><div id="t_tt"></div></div>
 </div>
 
 <!-- CAMPAIGNS -->
@@ -294,12 +294,12 @@ function render(){
   const prevCh={};if(pw)pw.channels.forEach(c=>prevCh[c.channel+'|'+c.traffic]=c);
   const rows=w.channels.map(c=>{const p=prevCh[c.channel+'|'+c.traffic];return {...c,share:c.sales/T.sales,cvr:c.sessions?c.orders/c.sessions:0,aov:c.orders?c.sales/c.orders:0,
       chg:p&&p.sales?(c.sales-p.sales)/p.sales:null}});
-  table($('t_ch'),[{k:'channel',h:'Channel'},{k:'traffic',h:'Type',f:v=>`<span class="pill ${v==='paid'?'p-paid':v==='organic'?'p-org':''}">${v}</span>`},
+  table($('t_ch'),[{k:'channel',h:'Source'},{k:'group',h:'Marketing channel',f:v=>`<span class="pill ${v==='Email'?'p-paid':''}">${esc(v)}</span>`},
     {k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:(v)=>fP(v)+bar(v)},{k:'chg',h:'vs PW',f:v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${(v*100).toFixed(1)}%</span>`},
     {k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'new_cust',h:'New',f:fN},{k:'ret_cust',h:'Returning',f:fN}],
     rows,'sales',{total:{channel:'Total',sales:f$(T.sales),share:'100%',orders:fN(T.orders),sessions:fN(T.sessions),cvr:fP(T.cvr),aov:f$(T.aov),new_cust:fN(T.newc),ret_cust:fN(T.retc)}});
-  const tt={};w.channels.forEach(c=>{const x=tt[c.traffic]??={traffic:c.traffic,sales:0,orders:0,sessions:0};x.sales+=c.sales;x.orders+=c.orders;x.sessions+=c.sessions});
-  table($('t_tt'),[{k:'traffic',h:'Traffic type',f:v=>`<span class="pill">${v}</span>`},{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},
+  const tt={};w.channels.forEach(c=>{const x=tt[c.group]??={group:c.group,sales:0,orders:0,sessions:0};x.sales+=c.sales;x.orders+=c.orders;x.sessions+=c.sessions});
+  table($('t_tt'),[{k:'group',h:'Marketing channel'},{k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v)},
     {k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP}],
     Object.values(tt).map(x=>({...x,share:x.sales/T.sales,cvr:x.sessions?x.orders/x.sessions:0})),'sales');
 
@@ -308,7 +308,7 @@ function render(){
   const cs=cams.filter(c=>c.type==='Send'),cf=cams.filter(c=>c.type!=='Send'),sm=(a,k)=>a.reduce((x,c)=>x+c[k],0);
   $('k_ca').innerHTML=[kpi('Top-25 campaign sales',f$(sm(cams,'sales')),sm(cams,'sales'),null,'',1),kpi('Dated sends',f$(sm(cs,'sales')),sm(cs,'sales'),null,'',1,`${cs.length} sends with sales`),
     kpi('Always-on / other',f$(sm(cf,'sales')),sm(cf,'sales'),null,'',1,`${cf.length} lines with sales`),kpi('Top campaign share',fP(cams[0].sales/T.sales),cams[0].sales/T.sales,null,'rate',1,esc(cams[0].campaign))].join('');
-  table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Channel'},{k:'type',h:'Type',f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
+  table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Source'},{k:'group',h:'Marketing channel'},{k:'type',h:'Type',f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
     {k:'sales',h:'Sales',f:f$},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'new_cust',h:'New',f:fN},{k:'ret_cust',h:'Returning',f:fN}],
     cams,'sales',{detail:r=>dk('Campaign',esc(r.campaign))+dk('Channel',esc(r.channel))+dk('Sales per session',f$(r.sessions?r.sales/r.sessions:0))+dk('Share of attributed',fP(r.sales/T.sales))+dk('Sent',r.sent||'n/a')});
 

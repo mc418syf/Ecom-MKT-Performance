@@ -23,6 +23,32 @@ def clean_campaign(name):
     return n.strip()
 
 
+EMAIL = {"klaviyo", "spently", "mailchimp", "shopify_email", "gmail", "outlook.com"}
+SEARCH = {"google", "bing", "duckduckgo", "ecosia", "yahoo!", "brave", "startpage", "baidu", "naver", "msn"}
+SOCIAL = {"instagram", "facebook", "meta", "linktr", "pinterest", "reddit", "x", "youtube", "substack"}
+AI = {"chatgpt", "perplexity", "gemini"}
+PARTNER = {"couponbirds", "valuecom", "wethrift", "partnerize", "sovrn", "afterpay", "klarna", "sezzle", "zephr"}
+
+
+def group(channel, traffic):
+    """Roll raw source + traffic type up to a marketing channel group."""
+    if channel in EMAIL:
+        return "Email"
+    if channel == "google_ads" or (channel in SEARCH and traffic == "paid"):
+        return "Paid Search"
+    if channel == "meta_ads" or (channel in SOCIAL and traffic == "paid"):
+        return "Paid Social"
+    if channel in SEARCH:
+        return "Organic Search"
+    if channel in SOCIAL:
+        return "Organic Social"
+    if channel in AI:
+        return "AI Assistants"
+    if channel in PARTNER:
+        return "Affiliates & Partners"
+    return "Other / Unclassified"
+
+
 def span(path):
     m = re.search(r"(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})", path)
     return m.group(1), m.group(2)
@@ -45,9 +71,10 @@ for wd in sorted(glob.glob(os.path.join(ROOT, "data", "*"))):
                  "impr", "clicks", "ctr", "aov", "new_cust", "ret_cust"]
     adjustments = c[c.sales < 0]
     c = c[c.sales >= 0]
+    c["group"] = [group(a, t) for a, t in zip(c.channel, c.traffic)]
     active = c[(c.sales > 0) | (c.orders > 0)]
     tail = c.drop(active.index)
-    chan = active[["channel", "traffic", "sales", "sessions", "orders", "new_cust", "ret_cust"]].to_dict("records")
+    chan = active[["channel", "group", "traffic", "sales", "sessions", "orders", "new_cust", "ret_cust"]].to_dict("records")
     tail_row = {"channel": f"{len(tail)} other sources (no sales)", "traffic": "mixed", "sales": 0.0,
                 "sessions": int(tail.sessions.sum()), "orders": 0, "new_cust": 0, "ret_cust": 0}
 
@@ -56,8 +83,9 @@ for wd in sorted(glob.glob(os.path.join(ROOT, "data", "*"))):
     k.columns = ["campaign", "channel", "traffic", "sales", "sessions", "orders", "cvr", "spend", "roas", "cpa",
                  "cac", "impr", "clicks", "ctr", "aov", "new_cust", "ret_cust"]
     k["campaign_clean"] = k.campaign.map(clean_campaign)
+    k["group"] = [group(a, t) for a, t in zip(k.channel, k.traffic)]
     kn = k[k.sales >= 0]
-    kg = (kn.groupby(["campaign_clean", "channel", "traffic"], as_index=False)
+    kg = (kn.groupby(["campaign_clean", "channel", "group", "traffic"], as_index=False)
             [["sales", "sessions", "orders", "new_cust", "ret_cust"]].sum())
     kg = kg[(kg.sales > 0) | (kg.orders > 0)].sort_values("sales", ascending=False)
 
