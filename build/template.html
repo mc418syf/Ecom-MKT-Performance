@@ -119,6 +119,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <button class="tab active" data-t="sm">Summary</button>
   <button class="tab" data-t="ch">Channels</button>
   <button class="tab" data-t="ca">Campaigns</button>
+  <button class="tab" data-t="kl">Klaviyo</button>
   <button class="tab" data-t="pr">Product Performance</button>
   <button class="tab" data-t="co">Product × Channel</button>
   <button class="tab" data-t="me">Method</button>
@@ -167,6 +168,14 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
   <div class="sec" id="ca_cov"></div>
   <div class="kpi-strip"><div class="kpis" id="k_ca"></div></div>
   <div class="sec"><div class="sec-h">Campaign detail</div><div class="sec-s">Last non-direct click. Klaviyo clones merged into one send. "Send" = campaign with a dated name.</div><div class="tw" id="t_ca"></div></div>
+</div>
+
+<!-- KLAVIYO -->
+<div class="tab-panel" id="p_kl">
+  <div class="sec" id="kl_note"></div>
+  <div class="kpi-strip"><div class="kpis" id="k_kl"></div></div>
+  <div class="sec"><div class="sec-h">Klaviyo campaigns</div><div class="sec-s">Sends dated inside the selected range. Klaviyo delivery and engagement joined to Shopify attributed results (last non-direct click) by Klaviyo message ID.</div><div class="tw" id="t_kl"></div></div>
+  <div class="sec"><div class="sec-h">Klaviyo flows</div><div class="sec-s" id="fl_s"></div><div class="tw" id="t_fl"></div></div>
 </div>
 
 <!-- PRODUCT PERFORMANCE -->
@@ -331,9 +340,12 @@ function legend(el,items){el.innerHTML=items.map(([n,c])=>`<span><i style="backg
 
 /* ---- sends (dated Klaviyo campaigns) ---- */
 const isSend=n=>/^\d{4}_\d{2}_\d{2}_/.test(n),sendDate=n=>{const m=n.match(/^(\d{4})_(\d{2})_(\d{2})_/);return m?`${m[1]}-${m[2]}-${m[3]}`:null};
-const SENDS=(()=>{const m={};for(const x of CA.rows){const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||!isSend(c.campaign))continue;
-  const s=m[c.campaign]??={campaign:c.campaign,date:sendDate(c.campaign),sales:0,sessions:0,orders:0};s.sales+=x[2];s.sessions+=x[3];s.orders+=x[4]}
-  return Object.values(m).filter(s=>s.sessions>=100||s.sales>0).sort((a,b)=>a.date>b.date?1:-1)})();
+const KL=DATA.klaviyo,KLBY={},MIDS={},CAT=CA.camps.map(()=>({sales:0,sessions:0,orders:0,newc:0,retc:0}));
+KL.campaigns.forEach(k=>KLBY[k.mid]=k);
+CA.camps.forEach((c,i)=>{if(c.mid)(MIDS[c.mid]??=[]).push(i)});
+for(const x of CA.rows){const a=CAT[x[1]];a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.newc+=x[5];a.retc+=x[6]}
+const SENDS=KL.campaigns.map(k=>{const idx=MIDS[k.mid]||[],s={...k,campaign:k.name,sales:0,sessions:0,orders:0,matched:idx.length>0};
+  idx.forEach(i=>{s.sales+=CAT[i].sales;s.sessions+=CAT[i].sessions;s.orders+=CAT[i].orders});return s}).sort((a,b)=>a.date>b.date?1:-1);
 
 /* ---- render ---- */
 function render(){
@@ -368,12 +380,12 @@ function render(){
   const prows=prodRows(cur),dayNet={};prows.forEach(x=>{const d=PR.days[x[0]];dayNet[d]=(dayNet[d]||0)+x[12]});
   const peak=Object.entries(dayNet).sort((a,b)=>b[1]-a[1])[0];
   const grps=Object.values(T.byGrp).sort((a,b)=>b.sales-a.sales),em=T.byGrp['Email'];
-  const sends=SENDS.filter(s=>inR(s.date,cur)),topSend=sends.slice().sort((a,b)=>b.sales-a.sales)[0];
+  const sends=SENDS.filter(s=>inR(s.date,cur)),topSend=sends.slice().sort((a,b)=>(b.sales-a.sales)||(b.recipients-a.recipients))[0];
   const attrNoDirect=T.sales-(T.byGrp['Direct']?T.byGrp['Direct'].sales:0);
   $('signals').innerHTML=[
     ['Peak day',peak?lab(peak[0],{weekday:'short',month:'short',day:'numeric'}):'–',peak?`${f$(peak[1])} = ${fP(peak[1]/Pc.net)} of product net sales in range.`:'No product data in range.'],
     ['Top marketing channel',grps[0]?`${esc(grps[0].group)} · ${f$(grps[0].sales)}`:'–',grps[0]?`${fP(grps[0].sales/T.sales)} of attributed sales. ${em?'Email '+fP(em.sales/T.sales)+'.':''}`:'No channel data in range.'],
-    ['Top Klaviyo send',topSend?esc(topSend.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')):'–',topSend?`${f$(topSend.sales)} from ${fN(topSend.orders)} orders; ${fN(topSend.sessions)} sessions. ${sends.length} dated sends in range.`:'No dated sends with campaign data in range.'],
+    ['Top Klaviyo send',topSend?esc(topSend.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')):'–',topSend?`${f$(topSend.sales)} from ${fN(topSend.orders)} orders; ${fN(topSend.sessions)} sessions; ${fN(topSend.recipients)} recipients. ${sends.length} Klaviyo sends in range.`:'No Klaviyo sends in range.'],
     ['Attribution gap',f$(Pc.net-T.sales),`Product net sales minus attributed sales (${fP((Pc.net-T.sales)/(Pc.net||1))} of net). Direct is ${f$(T.byGrp['Direct']?T.byGrp['Direct'].sales:0)}; excluding it attributed is ${f$(attrNoDirect)}.`]
   ].map(([t,v,d])=>`<div class="sig-c"><div class="sig-t">${t}</div><div class="sig-v">${v}</div><div class="sig-d">${d}</div></div>`).join('');
 
@@ -383,7 +395,7 @@ function render(){
   days.forEach(d=>{const k=bucket(d,g);pk[k]=pk[k]||[0,0];ck[k]=ck[k]||{}});
   prows.forEach(x=>{const d=PR.days[x[0]],k=bucket(d,g);pk[k][PR.dims.release[x[3]]==='Release'?1:0]+=x[12]});
   const keys=Object.keys(pk).sort();
-  const mk=g==='day'?SENDS.filter(s=>inR(s.date,cur)).map(s=>({key:s.date,label:`${s.date} · ${s.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')} (${fN(s.sessions)} sessions)`})):[];
+  const mk=g==='day'?SENDS.filter(s=>inR(s.date,cur)&&s.recipients>=1000).map(s=>({key:s.date,label:`${s.date} · ${s.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,'')} (${fN(s.recipients)} recipients)`})):[];
   stacked($('ts_sm'),keys,[{name:'Regular',vals:keys.map(k=>pk[k][0])},{name:'Release',vals:keys.map(k=>pk[k][1])}],['#3987e5','#d95926'],{grain:g,markers:mk});
   legend($('lg_sm'),[['Regular','#3987e5'],['Release SKUs','#d95926'],...(mk.length?[['Klaviyo send','#f5b83d']]:[])]);
   /* trend: attributed sales by group */
@@ -397,7 +409,7 @@ function render(){
   const nk=`${S.start}_${S.end}`;
   ['what','so','next'].forEach(k=>{let v='';try{v=localStorage.getItem(`ls_nt_${nk}_${k}`)||''}catch(e){}$('nt_'+k).value=v});
 
-  renderChannels(T,Tc,Tp,R);renderCampaigns(R);renderProducts(R);renderCorr(R);renderMethod(R,T,Pc);
+  renderChannels(T,Tc,Tp,R);renderCampaigns(R);renderKlaviyo(R);renderProducts(R);renderCorr(R);renderMethod(R,T,Pc);
 }
 
 function renderChannels(T,Tc,Tp,R){
@@ -417,18 +429,58 @@ function renderCampaigns(R){
   const cur=R.cur,lo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],hi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1];
   $('ca_cov').innerHTML=`<div class="note ${cur[0]<COV.ca[0]||cur[1]>COV.ca[1]?'warn':''}">Campaign data covers <b>${COV.ca[0]} → ${COV.ca[1]}</b>. ${lo>hi?'Your range has no campaign data.':`Showing ${lo} → ${hi}.`} Export "Top performing marketing campaigns by day" for earlier dates to extend it.</div>`;
   const m={};for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];const k=c.campaign+'|'+c.channel;
-    const r=m[k]??={campaign:c.campaign,channel:c.channel,group:c.group,type:isSend(c.campaign)?'Send':'Always-on / other',sent:sendDate(c.campaign)||'',sales:0,sessions:0,orders:0,newc:0,retc:0};
-    r.sales+=x[2];r.sessions+=x[3];r.orders+=x[4];r.newc+=x[5];r.retc+=x[6]}
-  const rows=Object.values(m).filter(r=>r.sales!==0||r.sessions>=10).map(r=>({...r,cvr:r.sessions?r.orders/r.sessions:0,aov:r.orders?r.sales/r.orders:0}));
-  const sum=a=>rows.filter(a).reduce((x,r)=>x+r.sales,0),tot=rows.reduce((x,r)=>x+r.sales,0);
+    const r=m[k]??={campaign:c.campaign,channel:c.channel,group:c.group,type:isSend(c.campaign)?'Send':'Always-on / other',sent:sendDate(c.campaign)||'',mids:new Set(),sales:0,sessions:0,orders:0,newc:0,retc:0};
+    if(c.mid)r.mids.add(c.mid);r.sales+=x[2];r.sessions+=x[3];r.orders+=x[4];r.newc+=x[5];r.retc+=x[6]}
+  const rows0=Object.values(m).filter(r=>r.sales!==0||r.sessions>=10),tot=rows0.reduce((x,r)=>x+r.sales,0);
+  const rows=rows0.map(r=>{const ks=[...r.mids].map(i=>KLBY[i]).filter(Boolean),rec=ks.reduce((a,k)=>a+k.recipients,0),dl=ks.reduce((a,k)=>a+k.delivered,0);
+    return {...r,share:tot?r.sales/tot:0,cvr:r.sessions?r.orders/r.sessions:0,aov:r.orders?r.sales/r.orders:0,rec:ks.length?rec:null,
+      openR:ks.length&&dl?ks.reduce((a,k)=>a+k.uopens,0)/dl:null,clickR:ks.length&&dl?ks.reduce((a,k)=>a+k.uclicks,0)/dl:null}});
+  const sum=a=>rows.filter(a).reduce((x,r)=>x+r.sales,0);
   $('k_ca').innerHTML=[kpi('Campaign-attributed sales',f$(tot),tot,null,null,'',1,'Last non-direct click'),
     kpi('Dated sends',f$(sum(r=>r.type==='Send')),0,null,null,'',1,`${rows.filter(r=>r.type==='Send'&&r.sales>0).length} sends with sales`),
     kpi('Email (Klaviyo etc.)',f$(sum(r=>r.group==='Email')),0,null,null,'',1),kpi('Paid search + social',f$(sum(r=>r.group==='Paid Search'||r.group==='Paid Social')),0,null,null,'',1)].join('')
     .replace(/<div class="kpi-sub">.*?<\/div>/gs,'');
   table($('t_ca'),[{k:'campaign',h:'Campaign',nm:1},{k:'channel',h:'Source',l:1},{k:'group',h:'Marketing channel',l:1},{k:'type',h:'Type',l:1,f:v=>`<span class="pill">${v}</span>`},{k:'sent',h:'Sent',f:v=>v||'–'},
-    {k:'sales',h:'Sales',f:f$},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}],
-    rows,'sales',{total:{campaign:'Total',sales:f$(tot),orders:fN(rows.reduce((a,r)=>a+r.orders,0)),sessions:fN(rows.reduce((a,r)=>a+r.sessions,0))},
+    {k:'sales',h:'Sales',f:f$},{k:'share',h:'% of total',f:v=>fP(v)+bar(v*3)},{k:'orders',h:'Orders',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'rec',h:'Recipients',f:v=>v==null?'–':fN(v)},{k:'openR',h:'Open rate',f:v=>v==null?'–':fP(v)},{k:'clickR',h:'Click rate',f:v=>v==null?'–':fP(v)},{k:'cvr',h:'CVR',f:fP},{k:'aov',h:'AOV',f:f$},{k:'newc',h:'New',f:fN},{k:'retc',h:'Returning',f:fN}],
+    rows,'sales',{total:{campaign:'Total',share:'100%',sales:f$(tot),orders:fN(rows.reduce((a,r)=>a+r.orders,0)),sessions:fN(rows.reduce((a,r)=>a+r.sessions,0))},
     detail:r=>dk('Campaign',esc(r.campaign))+dk('Sales per session',f$(r.sessions?r.sales/r.sessions:0))+dk('Sent',r.sent||'n/a')+dk('Days since send (range end)',r.sent?diffDays(r.sent,hi)+'d':'n/a')});
+}
+
+/* ---- klaviyo ---- */
+const normFlow=n=>String(n).toLowerCase().replace(/\s*\([^)]*\)\s*$/,'').replace(/[_\s]+\d+[a-z]?$/,'').replace(/\s*#\d+.*$/,'').replace(/^ts[_ ]welcome$/,'welcome to livestock').trim();
+const kpiS=(l,v,n)=>`<div class="kpi hero"><div class="kpi-label">${l}</div><div class="kpi-value">${v}</div>${n?`<div class="kpi-note">${n}</div>`:''}</div>`;
+function renderKlaviyo(R){
+  const cur=R.cur,kc=[KL.campaigns[0].date,KL.campaigns[KL.campaigns.length-1].date],ss=SENDS.filter(s=>inR(s.date,cur));
+  $('kl_note').innerHTML=`<div class="note ${cur[0]<kc[0]||cur[1]>kc[1]?'warn':''}">Klaviyo campaign export covers <b>${kc[0]} → ${kc[1]}</b> (${KL.campaigns.length} sends). Shopify campaign data covers <b>${COV.ca[0]} → ${COV.ca[1]}</b>, so older sends show Klaviyo metrics only.</div>
+    <div class="note warn"><b>Klaviyo revenue is $0 in both exports</b>, and the "conversions" counts are far higher than Shopify orders (for example 378 conversions vs 6 Shopify orders for the Oct 22 Jellyfish send). The conversion metric in the export is probably not Placed Order. Re-export with Placed Order as the conversion metric to get revenue; until then use the Shopify attributed columns for sales.</div>`;
+  const sum=k=>ss.reduce((a,s)=>a+s[k],0),del=sum('delivered'),totSales=sum('sales');
+  $('k_kl').innerHTML=[kpiS('Sends',fN(ss.length),`${ss.filter(s=>s.matched).length} matched to Shopify`),kpiS('Recipients',fN(sum('recipients'))),
+    kpiS('Open rate',fP(del?sum('uopens')/del:0),'Unique opens ÷ delivered'),kpiS('Click rate',fP(del?sum('uclicks')/del:0),'Unique clicks ÷ delivered'),
+    kpiS('Unsubscribe rate',fP(del?sum('unsub')/del:0)),kpiS('Shopify attributed sales',f$(totSales),'Matched sends, last non-direct click')].join('');
+  const rows=ss.map(s=>({...s,openR:s.delivered?s.uopens/s.delivered:0,clickR:s.delivered?s.uclicks/s.delivered:0,unsubR:s.delivered?s.unsub/s.delivered:0,
+    sess:s.matched?s.sessions:null,sal:s.matched?s.sales:null,ord:s.matched?s.orders:null,share:s.matched&&totSales?s.sales/totSales:null,
+    per1k:s.matched&&s.recipients?s.sales/s.recipients*1000:null}));
+  const dash=f=>v=>v==null?'–':f(v);
+  table($('t_kl'),[{k:'date',h:'Sent'},{k:'name',h:'Campaign',nm:1},{k:'audience',h:'Audience',l:1,nm:1},{k:'subject',h:'Subject line',nm:1},{k:'recipients',h:'Recipients',f:fN},{k:'delivered',h:'Delivered',f:fN},
+    {k:'openR',h:'Open rate',f:fP},{k:'clickR',h:'Click rate',f:fP},{k:'unsubR',h:'Unsub rate',f:fP},{k:'conv',h:'KL conversions',f:fN},
+    {k:'sess',h:'Sessions',f:dash(fN)},{k:'ord',h:'Orders',f:dash(fN)},{k:'sal',h:'Sales',f:dash(f$)},{k:'share',h:'% of total',f:v=>v==null?'–':fP(v)+bar(v*3)},{k:'per1k',h:'Sales / 1k recipients',f:dash(f$)}],
+    rows,'date',{total:{name:'Total',recipients:fN(sum('recipients')),delivered:fN(del),openR:fP(del?sum('uopens')/del:0),clickR:fP(del?sum('uclicks')/del:0),unsubR:fP(del?sum('unsub')/del:0),
+      conv:fN(sum('conv')),sess:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.sessions,0)),ord:fN(ss.filter(s=>s.matched).reduce((a,s)=>a+s.orders,0)),sal:f$(totSales),share:'100%'},
+    detail:r=>dk('Message ID',esc(r.mid))+dk('Send time',esc(r.date+' '+r.time+' '+r.dow))+dk('Total bounced',fN(r.bounced))+dk('Spam complaints',fN(r.spam))+dk('Unique clicks',fN(r.uclicks))+dk('Subject',esc(r.subject||'–'))});
+  /* flows */
+  const lo=cur[0]<COV.ca[0]?COV.ca[0]:cur[0],hi=cur[1]>COV.ca[1]?COV.ca[1]:cur[1],sh={};
+  for(const x of CA.rows){const d=CA.days[x[0]];if(d<lo||d>hi)continue;const c=CA.camps[x[1]];if(c.channel!=='klaviyo'||isSend(c.campaign))continue;
+    const k=normFlow(c.campaign),a=sh[k]??={sales:0,sessions:0,orders:0,names:new Set()};a.sales+=x[2];a.sessions+=x[3];a.orders+=x[4];a.names.add(c.campaign)}
+  const totDel=KL.flows.reduce((a,f)=>a+f.deliveries,0),used=new Set();
+  const frows=KL.flows.map(f=>{const k=normFlow(f.flow),s=sh[k];if(s)used.add(k);
+    return {...f,share:totDel?f.deliveries/totDel:0,convPerDel:f.deliveries?f.conv/f.deliveries:0,sess:s?s.sessions:null,ord:s?s.orders:null,sal:s?s.sales:null}});
+  $('fl_s').innerHTML=`Snapshot from the flow analytics export (${KL.flow_file}). The file has no date range, so it does not follow the date picker. Shopify columns are for ${lo} → ${hi} and are matched by flow name; flow revenue in the Klaviyo export is $0 (see note above).`;
+  const unmatched=Object.entries(sh).filter(([k])=>!used.has(k)).map(([k,v])=>({k,...v})).filter(v=>v.sales!==0||v.sessions>=50);
+  table($('t_fl'),[{k:'flow',h:'Flow',nm:1},{k:'deliveries',h:'Deliveries',f:fN},{k:'share',h:'% of deliveries',f:v=>fP(v)+bar(v*2)},{k:'recipients',h:'Recipients',f:fN},{k:'conv',h:'KL conversions',f:fN},
+    {k:'convRate',h:'KL conv. rate',f:v=>v==null?'–':fP(v)},{k:'sess',h:'Shopify sessions',f:dash(fN)},{k:'ord',h:'Shopify orders',f:dash(fN)},{k:'sal',h:'Shopify sales',f:dash(f$)}],frows,'deliveries',
+    {total:{flow:'Total',deliveries:fN(totDel),share:'100%',recipients:fN(KL.flows.reduce((a,f)=>a+f.recipients,0)),conv:fN(KL.flows.reduce((a,f)=>a+f.conv,0)),
+      sess:fN(frows.reduce((a,f)=>a+(f.sess||0),0)),ord:fN(frows.reduce((a,f)=>a+(f.ord||0),0)),sal:f$(frows.reduce((a,f)=>a+(f.sal||0),0))}});
+  if(unmatched.length)$('t_fl').insertAdjacentHTML('afterend',`<div class="note" style="margin-top:10px">Shopify Klaviyo lines with no matching flow in the export: ${unmatched.map(u=>esc([...u.names][0])+' ('+f$(u.sales)+', '+fN(u.sessions)+' sessions)').join('; ')}.</div>`);
 }
 
 /* ---- product performance ---- */
@@ -443,7 +495,7 @@ function buildFilters(){
 function groupBy(rows,dimKey){const m={};for(const x of rows){const v=PR.dims[dimKey][x[FI[dimKey]]];const r=m[v]??={name:v,net:0,units:0};r.net+=x[12];r.units+=x[13]}return m}
 function renderProducts(R){
   const cur=R.cur,cmp=R.cmp,rc=prodRows(cur,true),rp=cmp?prodRows(cmp,true):null,rpy=prodRows(R.py,true);
-  const A=sumProd(rc),B=rp?sumProd(rp):null,Y=sumProd(rpy),hasB=cmp&&cmp[1]>=COV.pr[0]&&cmp[0]<=COV.pr[1];
+  const Pall=sumProd(prodRows(cur)),A=sumProd(rc),B=rp?sumProd(rp):null,Y=sumProd(rpy),hasB=cmp&&cmp[1]>=COV.pr[0]&&cmp[0]<=COV.pr[1];
   $('k_pr').innerHTML=[kpi('Net sales',f$(A.net),A.net,hasB&&B?B.net:null,Y.net,'',1),kpi('Units',fN(A.units),A.units,hasB&&B?B.units:null,Y.units,'',1),
     kpi('Avg price / unit',f$(A.asp),A.asp,hasB&&B?B.asp:null,Y.asp,'',1,'Net sales ÷ units'),kpi('Products sold',fN(A.products),A.products,hasB&&B?B.products:null,Y.products,'',1,'Unique SKUs')].join('');
   /* trend */
@@ -469,10 +521,10 @@ function renderProducts(R){
   const ac=agg(rc),ap=rp?agg(rp):null;
   const rank=o=>{const r={};Object.values(o).sort((a,b)=>b.net-a.net).forEach((x,i)=>r[x.s]=i+1);return r},rkP=ap?rank(ap):null;
   const list=Object.values(ac).sort((a,b)=>b.net-a.net).slice(0,100).map((r,i)=>{const sk=PR.skus[r.s],p=ap&&ap[r.s];
-    return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,
+    return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,shareAll:Pall.net?r.net/Pall.net:0,
       chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
   table($('t_pr'),[{k:'rank',h:'#'},{k:'title',h:'Product',nm:1,f:(v,r)=>(r.img?`<img class="thumb" loading="lazy" src="${esc(r.img)}" alt="">`:'')+esc(v)+(r.rel>r.net/2?' <span class="pill p-rel">release</span>':'')+(r.isNew?' <span class="pill p-new">new</span>':'')},
-    {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of range',f:v=>fP(v)+bar(v*5)},{k:'chg',h:'vs CMP',f:chgH},
+    {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of view',f:v=>fP(v)+bar(v*5)},{k:'shareAll',h:'% of total sales',f:fP},{k:'chg',h:'vs CMP',f:chgH},
     {k:'rkChg',h:'Rank Δ',f:v=>v==null?'<span class="flat">–</span>':v===0?'<span class="flat">=</span>':`<span class="${v>0?'up':'dn'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},
     {k:'units',h:'Units',f:fN},{k:'asp',h:'Avg price',f:f$},{k:'mdS',h:'Markdown %',f:fP}],
     list,'net',{detail:r=>dk('SKU',esc(r.sku))+dk('Class',esc(r.cls))+dk('Release sales',f$(r.rel))+dk('Markdown sales',f$(r.md))+dk('Compare sales',ap&&ap[r.s]?f$(ap[r.s].net):'–')});
@@ -502,13 +554,13 @@ function renderCorr(R){
   const lowerV=vend.map(v=>[v,v.toLowerCase()]);
   PR.rows.forEach(x=>{const d=PR.days[x[0]];aday[d]=(aday[d]||0)+x[12];const v=PR.dims.vendor[x[6]];(vday[v]??={})[d]=(vday[v][d]||0)+x[12]});
   const avg=(f,a,b)=>{let s=0,n=0;for(let d=a;d<=b;d=addDays(d,1)){s+=f(d)||0;n++}return n?s/n:0};
-  const sd=SENDS.filter(s=>s.date>=cur[0]&&s.date<=cur[1]&&s.date<=COV.pr[1]).map(s=>{
-    const name=s.campaign.toLowerCase().replace(/[_-]+/g,' '),hit=lowerV.find(([v,l])=>name.includes(l.replace(/\s*(wip|x)$/,'')));const v=hit?hit[0]:null;
+  const sd=SENDS.filter(s=>s.recipients>=1000&&s.date>=cur[0]&&s.date<=cur[1]&&s.date<=COV.pr[1]).map(s=>{
+    const name=(s.campaign+' '+(s.subject||'')).toLowerCase().replace(/[_-]+/g,' '),hit=lowerV.find(([v,l])=>name.includes(l.replace(/\s*(wip|x)$/,'')));const v=hit?hit[0]:null;
     const f=v?(d=>(vday[v]||{})[d]):(d=>aday[d]);const pre=avg(f,addDays(s.date,-3),addDays(s.date,-1)),post=avg(f,s.date,addDays(s.date,2));
-    return {date:s.date,campaign:s.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,''),vendor:v||'All vendors',sessions:s.sessions,sales:s.sales,orders:s.orders,pre,post,lift:pre?post/pre-1:null}});
+    return {date:s.date,campaign:s.campaign.replace(/^\d{4}_\d{2}_\d{2}_/,''),vendor:v||'All vendors',recipients:s.recipients,sessions:s.sessions,sales:s.sales,orders:s.orders,pre,post,lift:pre?post/pre-1:null}});
   $('co_sd').innerHTML='';
   if(!sd.length)$('co_sd').innerHTML=`<div class="note warn">No dated Klaviyo sends with campaign data fall inside the selected range. Campaign data covers ${COV.ca[0]} → ${COV.ca[1]}.</div>`;
-  else table($('co_sd'),[{k:'date',h:'Send date'},{k:'campaign',h:'Campaign',nm:1},{k:'vendor',h:'Vendor matched',l:1},{k:'sessions',h:'Sessions',f:fN},{k:'orders',h:'Orders',f:fN},{k:'sales',h:'Attributed sales',f:f$},
+  else table($('co_sd'),[{k:'date',h:'Send date'},{k:'campaign',h:'Campaign',nm:1},{k:'vendor',h:'Vendor matched',l:1},{k:'recipients',h:'Recipients',f:fN},{k:'sessions',h:'Sessions',f:fN},{k:'orders',h:'Orders',f:fN},{k:'sales',h:'Attributed sales',f:f$},
     {k:'pre',h:'Vendor $/day before',f:f$},{k:'post',h:'$/day send + 2d',f:f$},{k:'lift',h:'Lift',f:chgH}],sd,'date');
   /* heatmap */
   const hd=cur[1]>=cur[0]&&diffDays(cur[0],cur[1])<=30?cur:[addDays(cur[1],-30),cur[1]],hdays=[];for(let d=hd[0];d<=hd[1];d=addDays(d,1))hdays.push(d);

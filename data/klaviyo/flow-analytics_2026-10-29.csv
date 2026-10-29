@@ -1,0 +1,19 @@
+Type,Flow,Revenue,Conversions,Conversion rate,Deliveries,Recipients
+flow,Tap Cart Abandoned Cart,0.00,50,6.83%,1110,1112
+flow,Push - Fulfilled Order [Tapcart mobile app],0.00,31,9.57%,517,521
+flow,Push - Abandoned Cart [Tapcart mobile app],0.00,94,5.17%,3444,3453
+flow,ReturnZap - Auto Approved,0.00,64,11.47%,558,562
+flow,BROWSE ABANDONMENT,0.00,4871,6.69%,72824,73138
+flow,PRICE DROP,0.00,3284,8.46%,38798,39430
+flow,ReturnZap - In-Transit,0.00,20,4.55%,440,440
+flow,CART ABANDONMENT,0.00,897,0.27%,326823,422741
+flow,Cancelled Orders Discount,0.00,8,6.90%,116,116
+flow,[FR] CART ABANDONMENT,0.00,2,11.11%,18,18
+flow,WELCOME TO LIVESTOCK,0.00,1851,4.27%,43346,53679
+flow,Sunset Unengaged Subscribers - Customer vs. Non-Customer (clone),0.00,40,0.10%,39311,41675
+flow,Push - Back in Stock [Tapcart mobile app],0.00,1,5.56%,21,21
+flow,ReturnZap - Received,0.00,24,5.37%,447,450
+flow,[FR] WELCOME TO LIVESTOCK,0.00,8,26.67%,30,30
+flow,Apothecary Replen Flow,0.00,7,2.08%,336,342
+flow,Delayed Fulfillment - Standard,0.00,36,8.63%,417,424
+flow,Staff Work Anniversary 2025,0.00,4,12.50%,32,33

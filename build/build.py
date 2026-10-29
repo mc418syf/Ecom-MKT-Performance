@@ -52,6 +52,12 @@ def clean_campaign(name):
     return n.strip()
 
 
+def message_id(name):
+    """Klaviyo message id Shopify appends to campaign names, e.g. "... (01M5MXQECX3TF78FJF2J7YMN9F)"."""
+    m = re.search(r"\(([A-Za-z0-9]{20,30})\)\s*$", str(name))
+    return m.group(1) if m else ""
+
+
 def end_of(path):
     m = re.findall(r"\d{4}-\d{2}-\d{2}", os.path.basename(path))
     return m[-1] if m else ""
@@ -94,18 +100,45 @@ channels = {"days": c_days, "pairs": pairs.to_dict("records"), "rows": c_rows,
 # ---------------------------------------------------------------- campaigns (daily)
 k = load_folder("campaigns", "Day")
 k.columns = ["day", "campaign", "channel", "traffic", "sales", "sessions", "orders", "cvr", "aov", "newc", "retc"]
+k["mid"] = k.campaign.map(message_id)
 k["campaign"] = k.campaign.map(clean_campaign)
 k = k[(k.sales != 0) | (k.sessions != 0) | (k.orders != 0)]
 k["group"] = [group(a, t) for a, t in zip(k.channel, k.traffic)]
-k = k.groupby(["day", "campaign", "channel", "traffic", "group"], as_index=False)[["sales", "sessions", "orders", "newc", "retc"]].sum()
+k = k.groupby(["day", "campaign", "mid", "channel", "traffic", "group"], as_index=False)[["sales", "sessions", "orders", "newc", "retc"]].sum()
 k_days, k_dix = table(k.day)
-camps = k[["campaign", "channel", "traffic", "group"]].drop_duplicates().sort_values(["campaign", "channel"]).reset_index(drop=True)
-cp_ix = {(r.campaign, r.channel, r.traffic): i for i, r in camps.iterrows()}
-k_rows = [[k_dix[r.day], cp_ix[(r.campaign, r.channel, r.traffic)], round(r.sales, 2), int(r.sessions), int(r.orders), int(r.newc), int(r.retc)]
+camps = k[["campaign", "mid", "channel", "traffic", "group"]].drop_duplicates().sort_values(["campaign", "channel", "mid"]).reset_index(drop=True)
+cp_ix = {(r.campaign, r.mid, r.channel, r.traffic): i for i, r in camps.iterrows()}
+k_rows = [[k_dix[r.day], cp_ix[(r.campaign, r.mid, r.channel, r.traffic)], round(r.sales, 2), int(r.sessions), int(r.orders), int(r.newc), int(r.retc)]
           for r in k.sort_values("day").itertuples()]
 campaigns = {"days": k_days, "camps": camps.to_dict("records"), "rows": k_rows,
              "fields": ["d", "camp", "sales", "sessions", "orders", "new", "ret"],
              "attribution": "last non-direct click"}
+
+# ---------------------------------------------------------------- Klaviyo exports
+def pct(v):
+    return float(str(v).rstrip("%")) / 100 if pd.notna(v) else None
+
+
+kl_campaigns, seen = [], {}
+for f in sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaignListReport_*.csv")), key=end_of):
+    for r in pd.read_csv(f).itertuples(index=False):
+        seen[r[1]] = r  # newer export wins per message id
+for r in seen.values():
+    kl_campaigns.append({
+        "id": r[0], "mid": r[1], "name": str(r[2]), "date": str(r[6])[:10], "time": str(r[6])[11:16], "dow": r[7],
+        "subject": "" if pd.isna(r[8]) else str(r[8]), "audience": "" if pd.isna(r[5]) else str(r[5]),
+        "recipients": int(r[10] or 0), "conv": int(r[11] or 0), "convValue": float(r[13] or 0),
+        "uopens": int(r[16] or 0), "uclicks": int(r[19] or 0), "clicks": int(r[21] or 0), "unsub": int(r[22] or 0),
+        "spam": int(r[24] or 0), "delivered": int(r[26] or 0), "bounced": int(r[27] or 0)})
+kl_campaigns.sort(key=lambda x: x["date"])
+kl_flows, flow_file = [], ""
+ff = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "flow-analytics_*.csv")), key=end_of)
+if ff:
+    flow_file = end_of(ff[-1])
+    for r in pd.read_csv(ff[-1]).itertuples(index=False):
+        kl_flows.append({"flow": str(r[1]), "revenue": float(r[2] or 0), "conv": int(r[3] or 0), "convRate": pct(r[4]),
+                         "deliveries": int(r[5] or 0), "recipients": int(r[6] or 0)})
+klaviyo = {"campaigns": kl_campaigns, "flows": kl_flows, "flow_file": flow_file}
 
 # ---------------------------------------------------------------- products (daily lines)
 P = load_folder("product", "Date", dtype={"SKU": str, "Size": str})
@@ -141,11 +174,12 @@ product = {"days": p_days, "skus": [{"sku": s, "title": title.get(s, s), "img": 
            "raw_lines": raw_lines, "sale_lines": sale_lines}
 
 data = {"banner": "Livestock", "tz": "America/Vancouver", "week_start": "Sunday",
-        "channels": channels, "campaigns": campaigns, "product": product}
+        "channels": channels, "campaigns": campaigns, "product": product, "klaviyo": klaviyo}
 with open(os.path.join(ROOT, "build", "template.html")) as f:
     tpl = f.read()
 html = tpl.replace("/*__DATA__*/null", json.dumps(data, separators=(",", ":"), default=float))
 with open(os.path.join(ROOT, "index.html"), "w") as f:
     f.write(html)
 print(f"built index.html {len(html)/1e6:.1f} MB | channels {len(c_rows):,} rows {c_days[0]}..{c_days[-1]} | "
-      f"campaigns {len(k_rows):,} rows {k_days[0]}..{k_days[-1]} | product {len(p_rows):,} rows {p_days[0]}..{p_days[-1]}")
+      f"campaigns {len(k_rows):,} rows {k_days[0]}..{k_days[-1]} | product {len(p_rows):,} rows {p_days[0]}..{p_days[-1]} | "
+      f"klaviyo {len(kl_campaigns)} campaigns, {len(kl_flows)} flows")
