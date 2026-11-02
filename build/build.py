@@ -203,7 +203,12 @@ P = P.sort_values(["Date", "SKU"])
 p_rows = [[p_dix[r.Date], s_ix[r.SKU], enc["Status"][r.Status], enc["Release"][r.Release], enc["Size"][r.Size], enc["Province"][r.Province],
            enc["Product Vendor"][r._7], enc["Product Type"][r._8], enc["Department"][r.Department], enc["Class"][r.Class],
            enc["Sub Class"][r._11], enc["Season"][r.Season], round(r.net, 2), int(r.units)] for r in P.itertuples()]
-product = {"days": p_days, "skus": [{"sku": s, "title": title.get(s, s), "img": imgs.get(s, "")} for s in skus],
+inv = {}
+ivp = os.path.join(ROOT, "data", "inventory", "inventory_snapshot.csv")
+if os.path.exists(ivp):   # latest "Inventory Quantity" per SKU from the performance sheet
+    inv = {r[0]: (int(r[1]), r[2]) for r in pd.read_csv(ivp, dtype={"SKU": str}).itertuples(index=False)}
+product = {"days": p_days, "skus": [{"sku": s, "title": title.get(s, s), "img": imgs.get(s, ""), "inv": inv[s][0] if s in inv else None,
+                                     "invDate": inv[s][1] if s in inv else ""} for s in skus],
            "dims": {k2: v[0] if isinstance(v, tuple) else v for k2, v in dims.items()},
            "rows": p_rows,
            "fields": ["d", "s", "status", "release", "size", "province", "vendor", "type", "dept", "cls", "sub", "season", "net", "units"],

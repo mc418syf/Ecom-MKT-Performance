@@ -196,7 +196,7 @@ svg text{fill:var(--text-3);font-size:11px;font-family:'Barlow',sans-serif}
       <option value="sub">Sub Class</option><option value="status">Status</option><option value="release">Release vs Regular</option><option value="season">Season</option><option value="size">Size</option></select></div></div>
     <div class="chart-wrap"><div class="legend" id="lg_fw"></div><div id="ts_fw"></div></div></div>
   <div class="sec"><div class="sec-h">Mix</div><div class="sec-s">Share of net sales in the selected range, with change vs the comparison range.</div><div class="grid3" id="mixes"></div></div>
-  <div class="sec"><div class="sec-h">Top products</div><div class="sec-s">Top 100 by net sales for the filters above. Click a row for detail.</div><div class="tw" id="t_pr"></div></div>
+  <div class="sec"><div class="sec-h">Top products</div><div class="sec-s">Top 100 by net sales for the filters above. Available units = Inventory Quantity from the performance sheet (latest value per product); days of cover = available ÷ units sold per day in the selected range. Click a row for detail.</div><div class="tw" id="t_pr"></div></div>
 </div>
 
 <!-- CORRELATION -->
@@ -622,13 +622,14 @@ function renderProducts(R){
   const ac=agg(rc),ap=rp?agg(rp):null,apy=hasPy?agg(rpy):null;
   const rank=o=>{const r={};Object.values(o).sort((a,b)=>b.net-a.net).forEach((x,i)=>r[x.s]=i+1);return r},rkP=ap?rank(ap):null;
   const list=Object.values(ac).sort((a,b)=>b.net-a.net).slice(0,100).map((r,i)=>{const sk=PR.skus[r.s],p=ap&&ap[r.s];
-    return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,shareAll:Pall.net?r.net/Pall.net:0,
+    const days=diffDays(cur[0],cur[1])+1,perDay=r.units/days;
+    return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,inv:sk.inv,invDate:sk.invDate,cover:sk.inv!=null&&perDay>0?Math.max(0,sk.inv)/perDay:null,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,shareAll:Pall.net?r.net/Pall.net:0,
       chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,chgPY:apy&&apy[r.s]?chg(r.net,apy[r.s].net):null,isNewPY:!!apy&&!apy[r.s],rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
   table($('t_pr'),[{k:'rank',h:'#'},{k:'title',h:'Product',nm:1,f:(v,r)=>(r.img?`<img class="thumb" loading="lazy" src="${esc(r.img)}" alt="">`:'')+esc(v)+(r.rel>r.net/2?' <span class="pill p-rel">release</span>':'')+(r.isNew?' <span class="pill p-new">new</span>':'')},
     {k:'vendor',h:'Vendor',l:1},{k:'dept',h:'Department',l:1},{k:'net',h:'Net sales',f:f$},{k:'share',h:'% of view',f:v=>fP(v)+bar(v*5)},{k:'shareAll',h:'% of total sales',f:fP},{k:'chg',h:'vs CMP',f:chgH},{k:'chgPY',h:'vs PY',f:(v,r)=>v==null?(r.isNewPY?'<span class="up">new</span>':'<span class="flat">n/a</span>'):chgH(v)},
     {k:'rkChg',h:'Rank Δ',f:v=>v==null?'<span class="flat">–</span>':v===0?'<span class="flat">=</span>':`<span class="${v>0?'up':'dn'}">${v>0?'▲':'▼'} ${Math.abs(v)}</span>`},
-    {k:'units',h:'Units',f:fN},{k:'asp',h:'Avg price',f:f$},{k:'mdS',h:'Markdown %',f:fP}],
-    list,'net',{detail:r=>dk('SKU',esc(r.sku))+dk('Class',esc(r.cls))+dk('Release sales',f$(r.rel))+dk('Markdown sales',f$(r.md))+dk('Compare sales',ap&&ap[r.s]?f$(ap[r.s].net):'–')});
+    {k:'units',h:'Units sold',f:fN},{k:'inv',h:'Available units',f:v=>v==null?'–':fN(v)},{k:'cover',h:'Days of cover',f:v=>v==null?'–':fN(v)},{k:'asp',h:'Avg price',f:f$},{k:'mdS',h:'Markdown %',f:fP}],
+    list,'net',{detail:r=>dk('SKU',esc(r.sku))+dk('Class',esc(r.cls))+dk('Release sales',f$(r.rel))+dk('Markdown sales',f$(r.md))+dk('Compare sales',ap&&ap[r.s]?f$(ap[r.s].net):'–')+dk('Available units',r.inv==null?'not in sheet':fN(r.inv)+' (as of '+r.invDate+')')});
 }
 
 /* ---- product × channel ---- */
