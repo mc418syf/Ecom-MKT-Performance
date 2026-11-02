@@ -298,15 +298,15 @@ function kpi(label,val,c,cmp,py,kind,hero,note){
   return `<div class="kpi ${hero?'hero':'mini'}"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div>
   <div class="kpi-sub">${chip('CMP',c,cmp,kind)}${chip('PY',c,py,kind)}</div>${note?`<div class="kpi-note">${note}</div>`:''}</div>`;
 }
-const chg=(c,p)=>p==null?null:p?(c-p)/p:(c?null:0);
+const chg=(c,p)=>p==null?null:p>0?(c-p)/p:p<0?null:(c?null:0);
 const chgH=v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${(v*100).toFixed(1)}%</span>`;
 const bar=v=>`<div class="bar"><i style="width:${Math.max(0,Math.min(100,v*100))}%"></i></div>`;
 const dk=(k,v)=>`<div><div class="det-k">${k}</div><div class="det-v">${v}</div></div>`;
 function table(el,cols,rows,sortKey,opt={}){
   let st={k:sortKey,d:-1},open=null;
   const draw=()=>{
-    rows.sort((a,b)=>{const x=a[st.k],y=b[st.k];return ((x==null)-(y==null))||(x>y?1:x<y?-1:0)}).valueOf();
-    if(st.d<0)rows.reverse();
+    rows.forEach((r,i)=>{if(r.__i==null)r.__i=i});
+    rows.sort((a,b)=>{const x=a[st.k],y=b[st.k],n=(x==null)-(y==null);if(n)return n;const c=x>y?1:x<y?-1:0;return c?c*st.d:a.__i-b.__i});
     let h='<table><thead><tr>'+cols.map(c=>`<th data-k="${c.k}" class="${st.k===c.k?'sorted':''} ${c.l||c.nm?'l':''}">${c.h}${st.k===c.k?(st.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr></thead><tbody>';
     rows.forEach((r,i)=>{
       h+=`<tr class="${opt.detail?'drill':''}" data-i="${i}">`+cols.map(c=>`<td class="${c.nm?'nm':''} ${c.l||c.nm?'l':''}">${c.f?c.f(r[c.k],r):esc(r[c.k]??'')}</td>`).join('')+'</tr>';
@@ -620,8 +620,8 @@ function renderProducts(R){
   /* top products */
   const agg=rows=>{const m={};rows.forEach(x=>{const r=m[x[1]]??={s:x[1],net:0,units:0,md:0,rel:0};r.net+=x[12];r.units+=x[13];if(PR.dims.status[x[2]]==='Markdowns')r.md+=x[12];if(PR.dims.release[x[3]]==='Release')r.rel+=x[12];r.vendor=PR.dims.vendor[x[6]];r.dept=PR.dims.dept[x[8]];r.cls=PR.dims.cls[x[9]]});return m};
   const ac=agg(rc),ap=rp?agg(rp):null,apy=hasPy?agg(rpy):null;
-  const rank=o=>{const r={};Object.values(o).sort((a,b)=>b.net-a.net).forEach((x,i)=>r[x.s]=i+1);return r},rkP=ap?rank(ap):null;
-  const list=Object.values(ac).sort((a,b)=>b.net-a.net).slice(0,100).map((r,i)=>{const sk=PR.skus[r.s],p=ap&&ap[r.s];
+  const rank=o=>{const r={};Object.values(o).sort((a,b)=>b.net-a.net||b.units-a.units||a.s-b.s).forEach((x,i)=>r[x.s]=i+1);return r},rkP=ap?rank(ap):null;
+  const list=Object.values(ac).sort((a,b)=>b.net-a.net||b.units-a.units||a.s-b.s).slice(0,100).map((r,i)=>{const sk=PR.skus[r.s],p=ap&&ap[r.s];
     const days=diffDays(cur[0],cur[1])+1,perDay=r.units/days;
     return {...r,rank:i+1,title:sk.title,img:sk.img,sku:sk.sku,inv:sk.inv,invDate:sk.invDate,cover:sk.inv!=null&&perDay>0?Math.max(0,sk.inv)/perDay:null,asp:r.units?r.net/r.units:0,share:A.net?r.net/A.net:0,shareAll:Pall.net?r.net/Pall.net:0,
       chg:hasB&&ap?(p?chg(r.net,p.net):null):null,isNew:hasB&&ap&&!p,chgPY:apy&&apy[r.s]?chg(r.net,apy[r.s].net):null,isNewPY:!!apy&&!apy[r.s],rkChg:hasB&&rkP&&rkP[r.s]?rkP[r.s]-(i+1):null,mdS:r.net?r.md/r.net:0}});
