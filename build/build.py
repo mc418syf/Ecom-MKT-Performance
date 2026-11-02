@@ -141,19 +141,27 @@ for f in sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaign_report
 kl_campaigns = sorted(seen.values(), key=lambda x: x["date"])
 
 # daily flow performance: deliveries (Received Email) and Placed Order revenue/orders attributed to each flow
+def merged_daily(prefix):
+    """Concatenate data/klaviyo/<prefix>_*.csv; a newer file replaces every day it contains."""
+    out = None
+    for f in sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", prefix + "_*.csv")), key=end_of):
+        df = pd.read_csv(f)
+        out = df if out is None else pd.concat([out[~out.Day.isin(set(df.Day))], df], ignore_index=True)
+    return out
+
+
 fd_days, fd_flows, fd_rows = [], [], []
-fdf = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "flow_daily_*.csv")), key=end_of)
-if fdf:
-    fdd = pd.read_csv(fdf[-1])
+fdd = merged_daily("flow_daily")
+if fdd is not None:
     fd_days, d_ix2 = table(fdd.Day)
     fd_flows, f_ix2 = table(fdd.Flow)
-    cols = list(fdd.columns)   # Day, Flow ID, Flow, Deliveries, Revenue, Orders, Opens, Unique opens, Clicks, Unique clicks
-    fd_rows = [[d_ix2[r[0]], f_ix2[r[2]], int(r[3]), round(float(r[4]), 2), int(r[5]),
-                int(r[7]) if len(r) > 7 else 0, int(r[9]) if len(r) > 9 else 0] for r in fdd.itertuples(index=False)]
+    # Day, Flow ID, Flow, Deliveries, Revenue, Orders, Opens, Unique opens, Clicks, Unique clicks
+    fd_rows = [[d_ix2[r[0]], f_ix2[r[2]], int(r[3]), round(float(r[4]), 2), int(r[5]), int(r[7]), int(r[9])]
+               for r in fdd.sort_values(["Day", "Flow"]).itertuples(index=False)]
 cd_days, cd_rows = [], []
-cdf = sorted(glob.glob(os.path.join(ROOT, "data", "klaviyo", "campaign_daily_*.csv")), key=end_of)
-if cdf:
-    cdd = pd.read_csv(cdf[-1])
+cdd = merged_daily("campaign_daily")
+if cdd is not None:
+    cdd = cdd.sort_values("Day").reset_index(drop=True)
     cd_days = list(cdd.Day)
     # Day, Deliveries, Revenue, Orders, Opens, Unique opens, Clicks, Unique clicks
     cd_rows = [[i, int(r[1]), round(float(r[2]), 2), int(r[3]), int(r[5]), int(r[7])] for i, r in enumerate(cdd.itertuples(index=False))]
