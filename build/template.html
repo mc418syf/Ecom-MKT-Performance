@@ -668,8 +668,8 @@ function renderCorr(R){
   const hd=cur[1]>=cur[0]&&diffDays(cur[0],cur[1])<=30?cur:[addDays(cur[1],-30),cur[1]],hdays=[];for(let d=hd[0];d<=hd[1];d=addDays(d,1))hdays.push(d);
   const hr=prodRows(hd),hs={};hr.forEach(x=>{const r=hs[x[1]]??={s:x[1],net:0,u:{}};r.net+=x[12];const d=PR.days[x[0]];r.u[d]=(r.u[d]||0)+x[12]});
   const htop=Object.values(hs).sort((a,b)=>b.net-a.net).slice(0,15),mx=Math.max(1,...htop.flatMap(r=>Object.values(r.u)));
-  $('hm').innerHTML=`<table><thead><tr><th>Product</th>`+hdays.map(d=>`<th style="cursor:default">${lab(d)}</th>`).join('')+`<th style="cursor:default">Total</th></tr></thead><tbody>`+
-    htop.map(r=>`<tr><td class="nm">${esc(PR.skus[r.s].title)}</td>`+hdays.map(d=>{const v=r.u[d]||0;return `<td class="cell" style="background:rgba(57,135,229,${v?(.12+.6*v/mx).toFixed(2):0})">${v?f$(v):''}</td>`}).join('')+`<td>${f$(r.net)}</td></tr>`).join('')+'</tbody></table>';
+  $('hm').innerHTML=`<table><thead><tr><th>Product</th>`+hdays.map(d=>`<th style="cursor:default">${lab(d)}</th>`).join('')+`<th style="cursor:default">Total</th><th style="cursor:default">Available units</th></tr></thead><tbody>`+
+    htop.map(r=>`<tr><td class="nm">${esc(PR.skus[r.s].title)}</td>`+hdays.map(d=>{const v=r.u[d]||0;return `<td class="cell" style="background:rgba(57,135,229,${v?(.12+.6*v/mx).toFixed(2):0})">${v?f$(v):''}</td>`}).join('')+`<td>${f$(r.net)}</td><td>${PR.skus[r.s].inv==null?'–':fN(PR.skus[r.s].inv)}</td></tr>`).join('')+'</tbody></table>';
 }
 
 function renderMethod(R,T,P){
