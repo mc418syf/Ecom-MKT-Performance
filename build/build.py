@@ -178,10 +178,15 @@ klaviyo = {"campaigns": kl_campaigns, "flows": kl_flows, "flow_file": flow_file,
 
 # ---------------------------------------------------------------- products (daily lines)
 P = load_folder("product", "Date", dtype={"SKU": str, "Size": str})
+# corrections: files in data/product/override/ replace every date they contain, whatever the file names say
+for of in sorted(glob.glob(os.path.join(ROOT, "data", "product", "override", "*.csv")), key=end_of):
+    od = pd.read_csv(of, dtype={"SKU": str, "Size": str})
+    od["Date"] = pd.to_datetime(od["Date"]).dt.strftime("%Y-%m-%d")
+    P = pd.concat([P[~P.Date.isin(set(od.Date))], od], ignore_index=True)
 raw_lines = len(P)
 P = P[(P["Net Sales"] != 0) | (P["Net Quantity"] != 0)]
 for col in ["SKU", "Product Title", "Product Vendor", "Product Type", "Province", "Size", "Status", "Release", "Season", "Department", "Class", "Sub Class"]:
-    P[col] = P[col].astype(str).replace({"nan": "(blank)", "False": "(blank)", "0": "(blank)"})
+    P[col] = P[col].fillna("(blank)").astype(str).replace({"nan": "(blank)", "False": "(blank)", "0": "(blank)"})
 keys = ["Date", "SKU", "Status", "Release", "Size", "Province", "Product Vendor", "Product Type", "Department", "Class", "Sub Class", "Season"]
 sale_lines = len(P)
 P = P.groupby(keys, as_index=False).agg(net=("Net Sales", "sum"), units=("Net Quantity", "sum"))
