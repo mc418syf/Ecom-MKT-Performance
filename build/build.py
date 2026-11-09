@@ -187,7 +187,10 @@ raw_lines = len(P)
 P = P[(P["Net Sales"] != 0) | (P["Net Quantity"] != 0)]
 for col in ["SKU", "Product Title", "Product Vendor", "Product Type", "Province", "Size", "Status", "Release", "Season", "Department", "Class", "Sub Class"]:
     P[col] = P[col].fillna("(blank)").astype(str).replace({"nan": "(blank)", "False": "(blank)", "0": "(blank)"})
-keys = ["Date", "SKU", "Status", "Release", "Size", "Province", "Product Vendor", "Product Type", "Department", "Class", "Sub Class", "Season"]
+keys = ["Date", "SKU", "Status", "Release", "Size", "Province", "Product Vendor", "Product Type", "Department", "Class", "Sub Class", "Season", "Country"]
+CA = {"Ontario","British Columbia","Alberta","Quebec","Manitoba","Saskatchewan","Nova Scotia","Newfoundland and Labrador","New Brunswick","Prince Edward Island","Northwest Territories","Yukon","Nunavut"}
+OTHER = {"Puerto Rico","England","Gunma","Ōsaka","(blank)"}
+P["Country"] = P["Province"].map(lambda v: "Canada" if v in CA else ("Other / international" if v in OTHER else "United States"))
 sale_lines = len(P)
 P = P.groupby(keys, as_index=False).agg(net=("Net Sales", "sum"), units=("Net Quantity", "sum"))
 
@@ -202,12 +205,12 @@ if os.path.exists(ip):
 
 dims, enc = {}, {}
 for col, key in [("Status", "status"), ("Release", "release"), ("Size", "size"), ("Province", "province"), ("Product Vendor", "vendor"),
-                 ("Product Type", "type"), ("Department", "dept"), ("Class", "cls"), ("Sub Class", "sub"), ("Season", "season")]:
+                 ("Product Type", "type"), ("Department", "dept"), ("Class", "cls"), ("Sub Class", "sub"), ("Season", "season"), ("Country", "country")]:
     dims[key], enc[col] = table(P[col])
 P = P.sort_values(["Date", "SKU"])
 p_rows = [[p_dix[r.Date], s_ix[r.SKU], enc["Status"][r.Status], enc["Release"][r.Release], enc["Size"][r.Size], enc["Province"][r.Province],
            enc["Product Vendor"][r._7], enc["Product Type"][r._8], enc["Department"][r.Department], enc["Class"][r.Class],
-           enc["Sub Class"][r._11], enc["Season"][r.Season], round(r.net, 2), int(r.units)] for r in P.itertuples()]
+           enc["Sub Class"][r._11], enc["Season"][r.Season], round(r.net, 2), int(r.units), enc["Country"][r.Country]] for r in P.itertuples()]
 inv = {}
 ivp = os.path.join(ROOT, "data", "inventory", "inventory_snapshot.csv")
 if os.path.exists(ivp):   # latest "Inventory Quantity" per SKU from the performance sheet
@@ -224,7 +227,7 @@ product = {"days": p_days, "skus": [{"sku": s, "title": title.get(s, s), "img": 
                                      "invDate": inv[s][1] if s in inv else "", "erp": erp.get(s)} for s in skus],
            "dims": {k2: v[0] if isinstance(v, tuple) else v for k2, v in dims.items()},
            "rows": p_rows,
-           "fields": ["d", "s", "status", "release", "size", "province", "vendor", "type", "dept", "cls", "sub", "season", "net", "units"],
+           "fields": ["d", "s", "status", "release", "size", "province", "vendor", "type", "dept", "cls", "sub", "season", "net", "units", "country"],
            "raw_lines": raw_lines, "sale_lines": sale_lines}
 
 data = {"banner": "Livestock", "tz": "America/Vancouver", "week_start": "Sunday",
