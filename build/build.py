@@ -212,8 +212,16 @@ inv = {}
 ivp = os.path.join(ROOT, "data", "inventory", "inventory_snapshot.csv")
 if os.path.exists(ivp):   # latest "Inventory Quantity" per SKU from the performance sheet
     inv = {r[0]: (int(r[1]), r[2]) for r in pd.read_csv(ivp, dtype={"SKU": str}).itertuples(index=False)}
+erp = {}
+import glob
+efs = sorted(glob.glob(os.path.join(ROOT, "data", "inventory", "inventory_by_size_*.csv")))
+if efs:
+    e = pd.read_csv(efs[-1], dtype={"SKU": str, "Size": str})
+    edate = os.path.basename(efs[-1])[-14:-4]
+    for r in e.itertuples(index=False):
+        erp[r.SKU] = {"site": r.Site, "size": r.Size, "sell": int(r.Sellable), "online": int(r.Online), "oh": int(r.On_hand) if hasattr(r, "On_hand") else int(r[5]), "oo": int(r[6]), "it": int(r[7]), "d": edate}
 product = {"days": p_days, "skus": [{"sku": s, "title": title.get(s, s), "img": imgs.get(s, ""), "inv": inv[s][0] if s in inv else None,
-                                     "invDate": inv[s][1] if s in inv else ""} for s in skus],
+                                     "invDate": inv[s][1] if s in inv else "", "erp": erp.get(s)} for s in skus],
            "dims": {k2: v[0] if isinstance(v, tuple) else v for k2, v in dims.items()},
            "rows": p_rows,
            "fields": ["d", "s", "status", "release", "size", "province", "vendor", "type", "dept", "cls", "sub", "season", "net", "units"],
