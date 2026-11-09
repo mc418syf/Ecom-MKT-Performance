@@ -19,7 +19,8 @@ FLOW_NAMES = {
     "ThUKTb": "Push - Abandoned Cart [Tapcart mobile app]", "UHB5rx": "[FR] WELCOME TO LIVESTOCK", "UKTQJr": "Wishlist Price Drop Alert - Standard",
     "ULGYQC": "ReturnZap - In-Transit", "VDGMs7": "Staff Work Anniversary 2025", "VY8GcK": "PRICE DROP", "VceMF3": "Apothecary Replen Flow",
     "WW4aVB": "BROWSE ABANDONMENT", "WtSWQy": "[FR] CART ABANDONMENT", "XMrQUB": "Push - Fulfilled Order [Tapcart mobile app]",
-    "Xrys6z": "ReturnZap - Auto Approved", "Y7rJMX": "ReturnZap - Received", "Yakar9": "Cancelled Orders Discount"}
+    "Xrys6z": "ReturnZap - Auto Approved", "Y7rJMX": "ReturnZap - Received", "Yakar9": "Cancelled Orders Discount",
+    "Tn2btp": "Wishlist - Back in stock alert"}
 
 
 def load(path):
