@@ -288,15 +288,16 @@ function sumProd(rows){const t={net:0,units:0,rel:0,md:0},sk=new Set();for(const
   t.products=sk.size;t.asp=t.units?t.net/t.units:0;t.relS=t.net?t.rel/t.net:0;t.mdS=t.net?t.md/t.net:0;return t}
 
 /* ---- ui helpers ---- */
-function chip(label,c,p,kind){
+function chip(label,c,p,kind,fm){
   if(p==null||(typeof p==='number'&&!isFinite(p)))return `<span class="dch"><em>${label}</em><b class="flat">n/a</b></span>`;
   if(kind==='rate'){const d=(c-p)*100;return `<span class="dch"><em>${label}</em><b class="${d>=0?'up':'dn'}">${d>=0?'+':''}${d.toFixed(2)} pp</b></span>`}
   if(!p)return `<span class="dch"><em>${label}</em><b class="flat">${c?'new':'n/a'}</b></span>`;
-  const d=(c-p)/p;return `<span class="dch"><em>${label}</em><b class="${d>=0?'up':'dn'}">${d>=0?'+':''}${(d*100).toFixed(1)}%</b></span>`;
+  const d=(c-p)/p,a=c-p,ab=fm?` <span style="font-weight:500;opacity:.85">(${a>=0?'+':'-'}${fm(Math.abs(a))})</span>`:'';return `<span class="dch"><em>${label}</em><b class="${d>=0?'up':'dn'}">${d>=0?'+':''}${(d*100).toFixed(1)}%${ab}</b></span>`;
 }
 function kpi(label,val,c,cmp,py,kind,hero,note){
+  const fm=kind==='rate'?null:(String(val).startsWith('$')?f$:fN);
   return `<div class="kpi ${hero?'hero':'mini'}"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div>
-  <div class="kpi-sub">${chip('CMP',c,cmp,kind)}${chip('PY',c,py,kind)}</div>${note?`<div class="kpi-note">${note}</div>`:''}</div>`;
+  <div class="kpi-sub">${chip('CMP',c,cmp,kind,fm)}${chip('PY',c,py,kind,fm)}</div>${note?`<div class="kpi-note">${note}</div>`:''}</div>`;
 }
 const chg=(c,p)=>p==null?null:p>0?(c-p)/p:p<0?null:(c?null:0);
 const chgH=v=>v==null?'<span class="flat">n/a</span>':`<span class="${v>=0?'up':'dn'}">${v>=0?'+':''}${(v*100).toFixed(1)}%</span>`;
